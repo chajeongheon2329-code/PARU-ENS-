@@ -205,7 +205,14 @@ body.fullmap-mode #scale-bar{z-index:9010;}
       <button class="tb finish" id="bfinish" onclick="finishAll()">★ 완성</button>
       <button class="tb"        id="bfull"   onclick="enterFullMap()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08)">⛶ 전체화면</button>
       <button class="tb ng"     onclick="resetAll()">✕ 초기화</button>
-      <button class="tb" id="bsave" onclick="saveProject()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700">💾 저장</button>
+      <div style="position:relative;display:inline-flex">
+        <button class="tb" id="bsave" onclick="saveProject()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700;border-right:none;border-radius:4px 0 0 4px">💾 저장</button>
+        <button class="tb" onclick="toggleProjectDropdown()" id="btn-proj-dd" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700;padding:5px 7px;border-radius:0 4px 4px 0;border-left:1px solid rgba(57,211,83,.3)" title="현장 목록">▾</button>
+        <div id="project-dropdown" style="display:none;position:absolute;top:100%;left:0;min-width:240px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:9999;padding:8px;margin-top:4px;max-height:320px;overflow-y:auto">
+          <div style="font-size:10px;color:var(--text3);padding:2px 4px 6px;font-weight:700;letter-spacing:1px;border-bottom:1px solid var(--border);margin-bottom:6px">📁 저장된 현장</div>
+          <div id="dd-project-list"><div style="font-size:11px;color:var(--text3);padding:4px">저장된 현장이 없습니다.</div></div>
+        </div>
+      </div>
       <button class="tb" id="bload" onclick="loadProject(null)" style="border-color:#79c0ff;color:#79c0ff;background:rgba(121,192,255,.08);font-weight:700">📂 불러오기</button>
       <button class="tb" id="bsaveas" onclick="saveProjectAs()" style="border-color:#bc8cff;color:#bc8cff;background:rgba(188,140,255,.08);font-weight:700" title="다른 이름으로 저장">📝 다른이름</button>
       <input type="file" id="load-file-input" accept=".json" style="display:none" onchange="loadProject(this)">
@@ -415,7 +422,11 @@ body.fullmap-mode #scale-bar{z-index:9010;}
           </div>
         </div>
         <div class="sec">
-          <div class="sec-t">💰 견적 계산</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="sec-t" style="margin-bottom:0;border-bottom:none;padding-bottom:0">💰 견적 계산</div>
+            <button id="est-toggle-btn" onclick="toggleEstimate()" style="background:transparent;border:1px solid var(--border);color:var(--text3);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit">활성화</button>
+          </div>
+          <div id="est-body" style="display:none">
           <div class="row">
             <label class="lbl">kW당 단가</label>
             <input type="number" id="price-per-kw" value="1500000" min="0" oninput="calcEstimate()" placeholder="원">
@@ -447,6 +458,7 @@ body.fullmap-mode #scale-bar{z-index:9010;}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:4px" id="est-per-w"></div>
           </div>
+          </div><!-- /est-body -->
         </div>
       </div>
 
@@ -3525,6 +3537,133 @@ window.resetAll=function(){  if(!confirm('모든 배치를 초기화할까요?')
 <script>
 /* ══════════════════════════════════════════════════════
    ☀ SOLARDESIGN — 현장관리 / 견적계산 / 카메라
+
+   ── PWA 설치 유도 배너 ──
+   접속 시 설치 안내 표시
+*/
+
+/* 설치 배너 표시 */
+function _showInstallBanner() {
+  if (localStorage.getItem('sd_install_dismissed')) return;
+  if (window.matchMedia('(display-mode: standalone)').matches) return; /* 이미 설치됨 */
+  var banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = [
+    'position:fixed;bottom:0;left:0;right:0;z-index:99998',
+    'background:linear-gradient(135deg,#1a2e1a,#0d1a0d)',
+    'border-top:2px solid #2da84a',
+    'padding:14px 16px',
+    'display:flex;align-items:center;gap:12px',
+    'box-shadow:0 -4px 24px rgba(0,0,0,.6)'
+  ].join(';');
+  banner.innerHTML = [
+    '<img src="icon-192.png" style="width:44px;height:44px;border-radius:10px;flex-shrink:0">',
+    '<div style="flex:1;min-width:0">',
+      '<div style="font-size:14px;font-weight:700;color:#fff">SOLARDESIGN 앱 설치</div>',
+      '<div style="font-size:11px;color:#2da84a;margin-top:2px">홈화면에 추가하면 앱처럼 사용할 수 있어요</div>',
+    '</div>',
+    '<button id="install-btn" onclick="triggerInstall()" style="background:#2da84a;border:none;color:#fff;padding:9px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;white-space:nowrap;flex-shrink:0">설치</button>',
+    '<button onclick="dismissInstallBanner()" style="background:transparent;border:1px solid #444;color:#888;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0">나중에</button>'
+  ].join('');
+  document.body.appendChild(banner);
+}
+
+window.dismissInstallBanner = function() {
+  var b = document.getElementById('install-banner');
+  if (b) b.remove();
+  localStorage.setItem('sd_install_dismissed', '1');
+};
+
+window.triggerInstall = function() {
+  if (_deferredInstall) {
+    _deferredInstall.prompt();
+    _deferredInstall.userChoice.then(function(r) {
+      if (r.outcome === 'accepted') {
+        dismissInstallBanner();
+        setSt('✅ 앱 설치 완료!', 'g');
+      }
+      _deferredInstall = null;
+    });
+  } else {
+    /* iOS Safari: 수동 안내 */
+    alert('📱 설치 방법
+
+아이폰: 하단 공유버튼(□↑) → "홈 화면에 추가"
+안드로이드: 브라우저 메뉴(⋮) → "홈 화면에 추가"');
+  }
+};
+
+/* 배너는 2초 후 표시 (앱 로드 완료 후) */
+setTimeout(_showInstallBanner, 2000);
+
+/* ── 드롭다운 현장 목록 ── */
+window.toggleProjectDropdown = function() {
+  var dd = document.getElementById('project-dropdown');
+  if (!dd) return;
+  var isOpen = dd.style.display !== 'none';
+  if (isOpen) { dd.style.display = 'none'; return; }
+  /* 열기 전 목록 갱신 */
+  renderDropdownProjects();
+  dd.style.display = 'block';
+  /* 바깥 클릭 시 닫기 */
+  setTimeout(function() {
+    document.addEventListener('click', function _close(e) {
+      var dd2 = document.getElementById('project-dropdown');
+      var btn = document.getElementById('btn-proj-dd');
+      if (dd2 && !dd2.contains(e.target) && e.target !== btn) {
+        dd2.style.display = 'none';
+      }
+      document.removeEventListener('click', _close);
+    });
+  }, 50);
+};
+
+window.renderDropdownProjects = function() {
+  var el = document.getElementById('dd-project-list');
+  if (!el) return;
+  if (!_projects.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px">저장된 현장이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = _projects.map(function(p) {
+    var totalKw = 0;
+    if (p.zones) p.zones.forEach(function(z){ totalKw += parseFloat(z.kw||0); });
+    var dt = p.savedAt ? new Date(p.savedAt).toLocaleDateString('ko-KR') : '';
+    return [
+      '<div onclick="ddLoadProject('+p.id+')" style="padding:8px;border-radius:6px;cursor:pointer;margin-bottom:3px;border:1px solid var(--border);background:var(--bg3)" onmouseover="this.style.borderColor='#39d353'" onmouseout="this.style.borderColor='var(--border)'">',
+        '<div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">',p.name,'</div>',
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px">',
+          (totalKw ? '⚡ '+totalKw.toFixed(2)+' kW  ' : ''),
+          dt,
+        '</div>',
+      '</div>'
+    ].join('');
+  }).join('');
+};
+
+window.ddLoadProject = function(id) {
+  var dd = document.getElementById('project-dropdown');
+  if (dd) dd.style.display = 'none';
+  projectLoad(id);
+};
+
+/* ── 견적 토글 ── */
+var _estActive = false;
+window.toggleEstimate = function() {
+  _estActive = !_estActive;
+  var body = document.getElementById('est-body');
+  var btn  = document.getElementById('est-toggle-btn');
+  if (body) body.style.display = _estActive ? 'block' : 'none';
+  if (btn) {
+    btn.textContent = _estActive ? '비활성화' : '활성화';
+    btn.style.borderColor = _estActive ? 'var(--green)' : 'var(--border)';
+    btn.style.color = _estActive ? 'var(--green)' : 'var(--text3)';
+  }
+  if (_estActive) calcEstimate();
+};
+
+/* ══════════════════════════════════════════════════════
+   ☀ SOLARDESIGN — 현장관리 / 견적계산 / 카메라
    ══════════════════════════════════════════════════════ */
 
 var _projects = [];   /* 저장된 현장 목록 */
@@ -3573,6 +3712,10 @@ function _getProjectData(name) {
 }
 
 /* ── 새 현장 저장 ── */
+window._closeSaveModal = function() {
+  var m = document.getElementById('sd-save-modal');
+  if (m) m.remove();
+};
 window.projectSaveNew = function() {
   var sname = document.getElementById('sname').value.trim();
   /* 이름 입력 모달 */
@@ -3589,7 +3732,7 @@ window.projectSaveNew = function() {
       '<div style="font-size:12px;color:#8b949e;margin-bottom:14px">저장할 현장 이름을 입력하세요</div>',
       '<input id="sd-pname" type="text" value="'+suggested+'" style="width:100%;background:#0d1117;border:1px solid #f7c948;color:#e6edf3;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;margin-bottom:14px;box-sizing:border-box" onkeydown="if(event.key==='Enter')document.getElementById('sd-pname-ok').click()">',
       '<div style="display:flex;gap:8px;justify-content:flex-end">',
-        '<button onclick="document.getElementById('sd-save-modal').remove()" style="background:transparent;border:1px solid #444c56;color:#8b949e;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">취소</button>',
+        '<button onclick="_closeSaveModal()" style="background:transparent;border:1px solid #444c56;color:#8b949e;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">취소</button>',
         '<button id="sd-pname-ok" style="background:#f7c948;border:none;color:#000;padding:7px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">저장</button>',
       '</div>',
     '</div>'
