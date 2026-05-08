@@ -1,65 +1,40 @@
-/* ☀ SOLARDESIGN — Service Worker v1.0 */
-const CACHE = 'solardesign-v1';
-const ASSETS = [
-  './',
-  './index.html',
+const CACHE='solar-v2';
+const FILES=[
+  './app.html',
   './manifest.json',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap'
+  './icon-192.png',
+  './icon-512.png'
 ];
-
-/* 설치: 핵심 파일 캐시 */
-self.addEventListener('install', function(e) {
+self.addEventListener('install',e=>{
   e.waitUntil(
-    caches.open(CACHE).then(function(cache) {
-      return cache.addAll(ASSETS).catch(function(err) {
-        console.warn('[SW] 일부 캐시 실패 (정상):', err);
-      });
-    })
+    caches.open(CACHE).then(c=>
+      Promise.allSettled(FILES.map(f=>c.add(f)))
+    )
   );
   self.skipWaiting();
 });
-
-/* 활성화: 이전 캐시 삭제 */
-self.addEventListener('activate', function(e) {
+self.addEventListener('activate',e=>{
   e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k) { return k !== CACHE; })
-            .map(function(k) { return caches.delete(k); })
-      );
-    })
+    caches.keys().then(ks=>
+      Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
+    )
   );
   self.clients.claim();
 });
-
-/* 요청 처리: 캐시 우선, 없으면 네트워크 */
-self.addEventListener('fetch', function(e) {
-  /* 지도 타일은 캐시하지 않음 (용량) */
-  if (e.request.url.includes('google.com/vt') ||
-      e.request.url.includes('dapi.kakao.com')) {
-    return;
-  }
+self.addEventListener('fetch',e=>{
+  const url=e.request.url;
+  if(url.includes('google.com/vt')||url.includes('dapi.kakao')||
+     url.includes('unpkg.com')||url.includes('openstreetmap'))return;
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      if (cached) return cached;
-      return fetch(e.request).then(function(response) {
-        /* 성공 응답만 캐시 */
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
+    caches.match(e.request).then(r=>{
+      if(r)return r;
+      return fetch(e.request).then(res=>{
+        if(res&&res.status===200&&res.type!=='opaque'){
+          var c=res.clone();
+          caches.open(CACHE).then(ca=>ca.put(e.request,c));
         }
-        var clone = response.clone();
-        caches.open(CACHE).then(function(cache) {
-          cache.put(e.request, clone);
-        });
-        return response;
-      }).catch(function() {
-        /* 오프라인: index.html 반환 */
-        if (e.request.destination === 'document') {
-          return caches.match('./index.html');
-        }
-      });
+        return res;
+      }).catch(()=>caches.match('./app.html'));
     })
   );
 });
