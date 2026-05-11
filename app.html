@@ -3621,10 +3621,36 @@ function _refreshDD(){
 
 /* ════ 현장 저장 ════ */
 window.projectSaveAs=function(){
-  var newName=prompt('새 현장 이름을 입력하세요:',document.getElementById('sname').value||'현장');
-  if(!newName)return;
-  var _si=document.getElementById('sname');if(_si)_si.value=newName;
-  projectSave();
+  var newName=prompt('저장할 현장 이름을 입력하세요:',document.getElementById('sname').value||'현장');
+  if(!newName||!newName.trim())return;
+  newName=newName.trim();
+  /* 자동 완성 */
+  if(zones.length&&!isFinished){
+    confirmedSVGImg=svgToDataUrl(buildPrintSVG());
+    fillRpt();isFinished=true;
+  }
+  var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','');
+  var filename=newName+'_'+dt+'.json';
+  var d={
+    name:newName,savedAt:new Date().toISOString(),
+    settings:{sname:document.getElementById('sname').value,
+      saddr:(document.getElementById('saddr')||{}).value||'',
+      mw:document.getElementById('mw').value,mh:document.getElementById('mh').value,
+      mp:document.getElementById('mp').value,mg:document.getElementById('mg').value,
+      mborder:document.getElementById('mborder').value,
+      iType:iType,orient:orient,rotA:rotA},
+    view:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()},
+    zones:zones.map(function(z){return{pts:z.pts,mods:z.mods,iType:z.iType,orient:z.orient,
+      rotA:z.rotA,mp:z.mp,cnt:z.cnt,kw:z.kw,area:z.area,borderOff:z.borderOff,name:z.name};}),
+    photos:(confirmedMapImgs&&confirmedMapImgs.length?confirmedMapImgs.map(function(x){return{src:x.src,name:x.name||''};}):[]),
+    svgImg:(confirmedSVGImg||null)
+  };
+  var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+  setSt('📥 저장됨: '+filename,'g');
 };
 
 window.projectSave=function(){
@@ -3847,7 +3873,7 @@ window.doInstall=function(){
   } else if(/android/i.test(ua)){
     msg='📱 안드로이드 홈화면 추가 방법\n\n1. Chrome 주소창 오른쪽 메뉴(⋮) 탭\n2. [앱 설치] 또는 [홈 화면에 추가] 선택\n3. [설치] 탭';
   } else {
-    msg='💻 PC 설치 방법\n\nChrome/Edge: 주소창 오른쪽 ⊕ 아이콘 클릭\n또는 메뉴 → SOLARDESIGN 설치';
+    msg='💻 PC 설치 방법\n\nChrome: 주소창 오른쪽 ⊕ 아이콘 클릭\nEdge: 주소창 오른쪽 ··· → 앱 → 이 사이트를 앱으로 설치\n\n설치 후 바탕화면 아이콘으로 실행 가능합니다';
   }
   alert(msg);
 };
