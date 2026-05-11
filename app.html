@@ -214,6 +214,7 @@ body.fullmap-mode #scale-bar{z-index:9010;}
         <button class="tb" onclick="projectSave()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700;border-right:none;border-radius:4px 0 0 4px;margin:0">💾 저장</button>
         <button onclick="toggleDD(event)" style="border:1px solid #39d353;border-left:1px solid rgba(57,211,83,.2);color:#39d353;background:rgba(57,211,83,.08);padding:4px 7px;cursor:pointer;font-size:11px;border-radius:0 4px 4px 0;font-family:inherit">▾</button>
         <div id="save-dd" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:230px;background:#161b22;border:1px solid #30363d;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:9999;padding:8px">
+          <button onclick="projectSaveAs();closeDD()" style="width:100%;background:#1c2230;border:1px solid #444;color:#f7c948;padding:7px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;margin-bottom:6px">✏️ 다른 이름으로 저장</button>
           <button onclick="document.getElementById('load-input').click();closeDD()" style="width:100%;background:#1c2230;border:1px solid #444;color:#79c0ff;padding:7px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;margin-bottom:6px">📂 불러오기 (파일)</button>
           <div style="font-size:10px;color:#555;padding:2px 0 6px;border-bottom:1px solid #30363d;margin-bottom:6px">📁 저장된 현장</div>
           <div id="dd-list"><div style="font-size:11px;color:#555;padding:4px">저장된 현장 없음</div></div>
@@ -1317,6 +1318,25 @@ function doPrint(){
   w.document.write('<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>면적(m²)</th><th>경계이격(mm)</th></tr>');
   zones.forEach(function(z,i){var _zn=z.name||('부지 '+(i+1));w.document.write('<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>');});
   w.document.write('</table><h2>전체 합계</h2><table><tr class="hl"><td>총 모듈 수량</td><td>'+totalCnt+' 장</td></tr><tr class="hl"><td>총 설비 용량</td><td>'+totalKw.toFixed(2)+' kW</td></tr><tr><td>설치 면적</td><td>'+totalArea.toFixed(1)+' m²</td></tr><tr><td>예상 연간 발전량</td><td>'+ann+' MWh/년</td></tr></table>');
+  /* ── 견적 계산 (활성화된 경우) ── */
+  if(_estOn){
+    var _ppk=parseFloat((document.getElementById('est-ppk')||{}).value)||0;
+    var _vat=parseFloat((document.getElementById('est-vat')||{}).value)||0;
+    var _sup=Math.round(totalKw*_ppk);
+    var _vatA=Math.round(_sup*_vat/100);
+    var _tot=_sup+_vatA;
+    var _fmtN=function(n){return n.toLocaleString('ko-KR');};
+    var _vatLbl=_vat?('포함('+_vat+'%)'):'미포함';
+    var _eHtml='<h2 style="background:#1a6b3a">💰 견적 계산</h2>';
+    _eHtml+='<table>';
+    _eHtml+='<tr><td style="width:50%">kW당 단가</td><td>'+_fmtN(_ppk)+' 원</td></tr>';
+    _eHtml+='<tr><td>총 용량</td><td>'+totalKw.toFixed(2)+' kW</td></tr>';
+    _eHtml+='<tr><td>공급가액</td><td>'+_fmtN(_sup)+' 원</td></tr>';
+    _eHtml+='<tr><td>부가세 ('+_vatLbl+')</td><td>'+_fmtN(_vatA)+' 원</td></tr>';
+    _eHtml+='<tr class="hl"><td><b>총 견적금액</b></td><td style="font-size:15px;font-weight:900;color:#1a6b3a">'+_fmtN(_tot)+' 원</td></tr>';
+    _eHtml+='</table>';
+    w.document.write(_eHtml);
+  }
   var hasUserPhotos=confirmedMapImgs&&confirmedMapImgs.length>0;
   /* 배치도 SVG: 사용자가 사진을 첨부하지 않은 경우에만 표시 */
   var mapSrc=confirmedSVGImg;
@@ -2061,6 +2081,7 @@ if(lswEl){
 }
 
 /* ── 레이어 전환 (swL 재정의 - 이벤트 차단) ── */
+/* 카카오 지적도/지형도: kakao.com 개발자 콘솔 → 내 앱 → 플랫폼 → Web에 배포 도메인 등록 필요 */
 window.swL=function(k,evt){
   if(evt){try{L.DomEvent.stopPropagation(evt);}catch(ex){}evt.stopPropagation();evt.preventDefault();}
   var all=['sat','satonly','road','terrain','vwroad','cadastral'];
@@ -2071,8 +2092,8 @@ window.swL=function(k,evt){
     if(cadastralOn){cadastralOn=false;hideCadastral();}
     try{map.removeLayer(curTile);}catch(e){}
     all.forEach(function(x){var el=document.getElementById('lb-'+x);if(el)el.classList.toggle('on',x===k);});
-    showKakaoTerrain();
-    setTimeout(function(){syncKakaoTerrain();},600);
+    try{showKakaoTerrain();}catch(e){setSt('지형도 오류: 카카오 API 도메인 미등록','r');terrainOn=false;return;}
+    setTimeout(function(){try{syncKakaoTerrain();}catch(e){};},600);
     _showCadLockBtn(false); /* 버튼 숨김만, _cadLocked 유지 */
     return;
   }
@@ -2082,9 +2103,9 @@ window.swL=function(k,evt){
     cadastralOn=true;
     try{map.removeLayer(curTile);}catch(e){}
     all.forEach(function(x){var el=document.getElementById('lb-'+x);if(el)el.classList.toggle('on',x===k);});
-    showCadastral(); /* 내부에서 _applyCadLockIfNeeded 호출 */
+    try{showCadastral();}catch(e){setSt('지적도 오류: 카카오 API 도메인 미등록','r');cadastralOn=false;return;}
     _showCadLockBtn(true);
-    setTimeout(function(){syncKakao();_updateCadLockBtnStyle();},600);
+    setTimeout(function(){try{syncKakao();_updateCadLockBtnStyle();}catch(e){};},600);
     return;
   }
   /* 다른 지도(위성/일반/OSM)로 전환 — _cadLocked 상태 보존, 버튼만 숨김 */
@@ -3516,6 +3537,23 @@ window.resetAll=function(){  if(!confirm('모든 배치를 초기화할까요?')
   if(cadastralOn){cadastralOn=false;hideCadastral();}
   rotA=0;document.getElementById('rsl').value=0;document.getElementById('rv').textContent='0°';
   ['vcnt','vkw','varea','vann'].forEach(function(id){document.getElementById(id).textContent='0';});
+  /* 보고서 초기화 */
+  var _rids=['rname','raddr','rcnt','rkw','rarea','rann','rdate'];
+  _rids.forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='-';});
+  var _si=document.getElementById('sname');if(_si)_si.value='';
+  var _ai=document.getElementById('saddr');if(_ai)_ai.value='';
+  var zt=document.getElementById('rzone-table');
+  if(zt){while(zt.rows.length>2)zt.deleteRow(2);}
+  /* 사진 초기화 */
+  confirmedMapImgs=[];
+  renderCaptureThumbs();
+  /* 견적 초기화 */
+  if(_estOn){_estOn=false;
+    var _eb=document.getElementById('est-body');if(_eb)_eb.style.display='none';
+    var _ebtn=document.getElementById('est-btn');
+    if(_ebtn){_ebtn.textContent='활성화';_ebtn.style.borderColor='var(--border)';
+      _ebtn.style.color='var(--text3)';_ebtn.style.background='transparent';}
+  }
   closeMovePanel();renderZoneList();setMode('pan');goTab(0);setSt('초기화 완료.','g');
 };
 
@@ -3533,7 +3571,7 @@ function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 
 /* ════ 접근 코드 ════ */
 (function(){
-  try{var s=_lsGet('sd_acc');if(s){var d=JSON.parse(s);if(d.exp&&Date.now()<d.exp)return;}}catch(e){}
+  try{if(sessionStorage.getItem('sd_ok')==='1')return;}catch(e){}
   var ov=document.createElement('div');
   ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:linear-gradient(160deg,#0b160b,#0d1117);display:flex;align-items:center;justify-content:center;flex-direction:column';
   ov.innerHTML='<div style="text-align:center;margin-bottom:24px"><img src="icon-192.png" style="width:80px;height:80px;border-radius:20px;margin-bottom:12px" onerror="this.style.display=\'none\'"><div style="font-size:22px;font-weight:900;color:#fff">SOLARDESIGN</div><div style="font-size:11px;color:#2da84a;margin-top:3px;letter-spacing:3px">PARU ENS</div></div><div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:26px 22px;width:300px;max-width:90vw"><div style="font-size:14px;font-weight:700;color:#e6edf3;text-align:center;margin-bottom:16px">접근 코드 입력</div><input id="ac-i" type="password" placeholder="접근 코드" autocomplete="off" style="width:100%;background:#0d1117;border:1px solid #444;color:#e6edf3;border-radius:8px;padding:12px;font-size:18px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;text-align:center;letter-spacing:6px" onkeydown="if(event.key===\'Enter\')_ac()"><div id="ac-e" style="display:none;color:#f85149;font-size:11px;text-align:center;margin-bottom:8px">❌ 코드가 올바르지 않습니다</div><button onclick="_ac()" style="width:100%;background:#2da84a;border:none;color:#fff;padding:12px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit">입장하기</button><div style="font-size:10px;color:#444;text-align:center;margin-top:10px">접근 코드는 관리자에게 문의하세요</div></div>';
@@ -3548,7 +3586,7 @@ window._ac=function(){
     var i=document.getElementById('ac-i');i.value='';i.style.borderColor='#f85149';i.focus();
     setTimeout(function(){i.style.borderColor='#444';},1500);return;
   }
-  _lsSet('sd_acc',JSON.stringify({exp:Date.now()+30*86400000}));
+  try{sessionStorage.setItem('sd_ok','1');}catch(e){}
   document.querySelector('[style*="999999"]').remove();
 };
 
@@ -3582,6 +3620,13 @@ function _refreshDD(){
 }
 
 /* ════ 현장 저장 ════ */
+window.projectSaveAs=function(){
+  var newName=prompt('새 현장 이름을 입력하세요:',document.getElementById('sname').value||'현장');
+  if(!newName)return;
+  var _si=document.getElementById('sname');if(_si)_si.value=newName;
+  projectSave();
+};
+
 window.projectSave=function(){
   var sug=(document.getElementById('sname').value.trim()||'현장')+'_'+new Date().toLocaleDateString('ko-KR');
   var old=document.getElementById('sv-m');if(old)old.remove();
