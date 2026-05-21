@@ -162,16 +162,9 @@ select option{background:var(--bg3)}
 @media(max-width:768px){#fullmap-exit{font-size:15px;padding:15px 36px;bottom:32px;}}
 #fullmap-hint{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9100;background:rgba(13,17,23,.7);border:1px solid var(--border);color:var(--text3);font-size:10px;padding:4px 14px;border-radius:10px;pointer-events:none;opacity:1;transition:opacity 1s;display:none;}
 #fullmap-hint.hide{opacity:0;}
-/* 전체화면: #map 크기/위치 변경 없이 부모를 fullscreen으로, 나머지 UI만 숨김 */
-body.fullmap-mode #app{position:fixed;inset:0;z-index:9000;}
-body.fullmap-mode .hdr{display:none!important;}
-body.fullmap-mode .stat-bar{display:none!important;}
-body.fullmap-mode .panel{display:none!important;}
-body.fullmap-mode .left-col{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;flex:none!important;}
-body.fullmap-mode #map{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;}
-body.fullmap-mode .body{position:absolute;inset:0;}
-body.fullmap-mode .left-col{position:absolute;inset:0;flex:none!important;}
-body.fullmap-mode #map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;}
+/* 전체화면 모드 */
+body.fullmap-mode{overflow:hidden;}
+body.fullmap-mode #app{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:9000;}
 body.fullmap-mode .hdr,
 body.fullmap-mode .stat-bar,
 body.fullmap-mode .panel,
@@ -179,9 +172,12 @@ body.fullmap-mode #panel-main,
 body.fullmap-mode #panel-collapsed,
 body.fullmap-mode .sbar,
 body.fullmap-mode #move-panel{display:none!important;}
+body.fullmap-mode .body{position:absolute!important;inset:0!important;overflow:hidden!important;}
+body.fullmap-mode .left-col{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;flex:none!important;overflow:hidden!important;}
+body.fullmap-mode #map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;}
 body.fullmap-mode #lsw{z-index:9020!important;}
-body.fullmap-mode #coord{z-index:9010;}
-body.fullmap-mode #scale-bar{z-index:9010;}
+body.fullmap-mode #coord{z-index:9010!important;}
+body.fullmap-mode #scale-bar{z-index:9010!important;}
 @media (max-width:768px){
   #app{height:100dvh;height:var(--real-vh,100dvh)}
   .body{flex-direction:column}
@@ -242,7 +238,7 @@ body.fullmap-mode #scale-bar{z-index:9010;}
     <div class="toolbar">
       <button class="tb" id="bmanual" onclick="openManual('all')" style="border-color:var(--accent);color:var(--accent);background:rgba(247,201,72,.1);font-weight:700">📖 사용법</button>
       <!-- 앱 설치 버튼 -->
-      <button id="pwa-install-btn" onclick="pwaTriggerInstall()" style="display:none;border:1px solid #f7c948;color:#f7c948;background:rgba(247,201,72,.1);font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;align-items:center;gap:4px" title="홈화면에 앱 설치">📲 앱 설치</button>
+      <button id="pwa-install-btn" onclick="pwaTriggerInstall()" style="display:inline-flex;border:1px solid #f7c948;color:#f7c948;background:rgba(247,201,72,.1);font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;align-items:center;gap:4px" title="홈화면에 앱 설치">📲 앱 설치</button>
       <div style="position:relative;display:inline-flex">
         <button class="tb" onclick="projectSave()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700;border-right:none;border-radius:4px 0 0 4px;margin:0">💾 저장</button>
         <button onclick="toggleDD(event)" style="border:1px solid #39d353;border-left:1px solid rgba(57,211,83,.2);color:#39d353;background:rgba(57,211,83,.08);padding:4px 7px;cursor:pointer;font-size:11px;border-radius:0 4px 4px 0;font-family:inherit">▾</button>
@@ -265,12 +261,15 @@ body.fullmap-mode #scale-bar{z-index:9010;}
       <!-- 모바일 전용 ··· 버튼 -->
       <div style="position:relative;display:inline-flex" class="tb-mobile-only">
         <button onclick="toggleMorePanel(event)" style="border:1px solid var(--border);color:var(--text);background:var(--bg2);font-weight:900;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:15px;font-family:inherit;letter-spacing:2px;min-width:40px">···</button>
-        <div id="tb-more-panel" style="display:none;position:fixed;top:52px;right:4px;background:#161b22;border:1px solid #30363d;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.85);z-index:99999;padding:8px;min-width:150px;flex-direction:column;gap:4px">
+        <div id="tb-more-panel" style="display:none;position:fixed;top:52px;right:4px;background:#161b22;border:1px solid #30363d;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.85);z-index:99999;padding:8px;min-width:160px;flex-direction:column;gap:4px">
+          <button onclick="pwaTriggerInstall();closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid rgba(247,201,72,.4);color:#f7c948;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">📲 앱 설치</button>
+          <div style="border-top:1px solid #30363d;margin:2px 0"></div>
           <button onclick="toggleMovePanel();closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid #30363d;color:#58a6ff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">⤢ 모듈이동</button>
-          <button onclick="setDelMode('del');closeMorePanel()"  style="width:100%;background:#1c2230;border:1px solid #30363d;color:#f85149;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">🖱 단일 삭제</button>
-          <button onclick="setDelMode('drag');closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid #30363d;color:#f85149;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">⬚ 드래그 삭제</button>
-          <button onclick="setDelMode('span');closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid #30363d;color:#f85149;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">▦ 스판 삭제</button>
-          <button onclick="confirmZone();closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid #30363d;color:#39d353;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">✓ 확정</button>
+          <button onclick="setDelMode('del');closeMorePanel()"  style="width:100%;background:#1c2230;border:1px solid rgba(188,140,255,.4);color:#bc8cff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">🖱 단일 삭제</button>
+          <button onclick="setDelMode('drag');closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid rgba(188,140,255,.4);color:#bc8cff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">⬚ 드래그 삭제</button>
+          <button onclick="setDelMode('span');closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid rgba(188,140,255,.4);color:#bc8cff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">▦ 스판 삭제</button>
+          <div style="border-top:1px solid #30363d;margin:2px 0"></div>
+          <button onclick="confirmZone();closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid rgba(57,211,83,.4);color:#39d353;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">✓ 확정</button>
           <button onclick="resetAll();closeMorePanel()" style="width:100%;background:#1c2230;border:1px solid #30363d;color:#f85149;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;text-align:left">✕ 초기화</button>
         </div>
       </div>
@@ -4293,15 +4292,20 @@ var _origOnResize=null;
 window.enterFullMap=function(){
   if(_fullMapActive)return;
   _fullMapActive=true;
-  try{map.off('resize');_origOnResize=map._onResize;map._onResize=function(){};}catch(ex){}
   document.body.classList.add('fullmap-mode');
   document.getElementById('fullmap-hint').style.display='block';
   document.getElementById('fullmap-exit').style.display='block';
-  /* 모바일: lsw 안 돌아가기 버튼도 표시 */
   var lbExit=document.getElementById('lb-fullmap-exit');if(lbExit)lbExit.style.display='';
   var hint=document.getElementById('fullmap-hint');
   setTimeout(function(){hint.classList.add('hide');},2500);
   document.addEventListener('keydown',_fullEscHandler);
+  /* 지도 크기 재계산 (모바일·PC 짤림 방지) */
+  setTimeout(function(){
+    try{map.invalidateSize({animate:false});}catch(e){}
+  },50);
+  setTimeout(function(){
+    try{map.invalidateSize({animate:false});}catch(e){}
+  },300);
   /* 전체화면 진입 시 이동 툴로 자동 전환 */
   if(pts.length>=3&&mods.length){
     setMode('move');
@@ -4315,10 +4319,12 @@ window.exitFullMap=function(){
   document.getElementById('fullmap-hint').style.display='none';
   document.getElementById('fullmap-exit').style.display='none';
   document.getElementById('fullmap-hint').classList.remove('hide');
-  /* 모바일: lsw 돌아가기 버튼 숨김 */
   var lbExit=document.getElementById('lb-fullmap-exit');if(lbExit)lbExit.style.display='none';
-  try{if(_origOnResize)map._onResize=_origOnResize;map.on('resize',map._onResize,map);}catch(ex){}
   document.removeEventListener('keydown',_fullEscHandler);
+  /* 지도 크기 복원 */
+  setTimeout(function(){
+    try{map.invalidateSize({animate:false});}catch(e){}
+  },50);
 };
 function _fullEscHandler(e){if(e.key==='Escape')exitFullMap();}
 
