@@ -2,11 +2,11 @@
   "name": "☀ SOLARDESIGN",
   "short_name": "SOLAR",
   "description": "태양광 패널 배치 설계 도구",
-  "start_url": "./app.html",
-  "scope": "./",
+  "start_url": "/PARU-ENS-/",
+  "scope": "/PARU-ENS-/",
   "display": "standalone",
   "background_color": "#0d1117",
-  "theme_color": "#2da84a",
+  "theme_color": "#f7c948",
   "orientation": "any",
   "icons": [
     {
@@ -18,6 +18,12 @@
     {
       "src": "icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
     }
