@@ -491,6 +491,17 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
                 <div class="row"><label class="lbl">서브 세로</label><input type="number" id="sr2" value="2" min="1" max="50" oninput="tryL()"><span class="unit">장</span></div>
               </div>
             </div>
+            <!-- 확장 배치 -->
+            <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:10px;color:var(--text3);font-weight:600">■ 확장 배치</span>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                  <input type="checkbox" id="expand-on" onchange="tryL()" style="cursor:pointer">
+                  <span style="font-size:10px;color:var(--text3)">사용</span>
+                </label>
+              </div>
+              <div style="font-size:10px;color:var(--text3);line-height:1.5">행 단위로 경계선에 밀착,<br>남북 이격 유지하며 빈 공간 채움</div>
+            </div>
           </div>
           <div id="ofe" class="opt">
             <!-- 추적축 방향 선택 -->
@@ -1262,48 +1273,92 @@ function calcMods(){
         }
       }
 
-    /* 서브 스팬 */
+    /* ── 서브 스팬 ──
+       규칙:
+       1. 크기 고정: 사용자 설정 sc3×sr3 그대로 — 절대 변경 안 함
+       2. 위치: 전역 격자 기준(bb.x0 + n*spX, bb.y0 + m*spY)으로 정렬
+          → 메인 스팬 격자와 동일한 좌표계에서 spX/spY 피치로 배열
+          → 메인/서브/서브끼리 모두 scg/sns 간격 자동 보장
+       3. 배치 조건: occCheck 통과 + trySpan 성공(경계 안)
+    */
     var subOn=document.getElementById('sub-span-on');
     if(!subOn||!subOn.checked)return;
     var sc3=parseInt((document.getElementById('sc2')||{}).value)||3;
     var sr3=parseInt((document.getElementById('sr2')||{}).value)||2;
-    var sW3=sc3*(mw+mg)-mg, sH3=sr3*(mh+mg)-mg;
-    /* 서브 스팬 피치 = 서브 크기 + 메인과 동일한 간격(scg, sns) */
-    var pX3=sW3+scg, pY3=sH3+sns;
+    var subW=sc3*(mw+mg)-mg, subH=sr3*(mh+mg)-mg;
+    /* 서브 피치 = 서브크기 + 메인과 동일한 간격 */
+    var spX=subW+scg, spY=subH+sns;
+    var tol=mg*0.05;
 
-    /* 배치된 모듈 영역 집합 (중복 방지용) */
-    var occupiedCenters=res.map(function(m){
-      var sx=0,sy=0;m.forEach(function(p){sx+=p[0];sy+=p[1];});
-      return[sx/m.length,sy/m.length];
-    });
-    function isOccupied(ox,oy){
-      for(var k=0;k<occupiedCenters.length;k++){
-        if(Math.abs(occupiedCenters[k][0]-ox)<mw*0.9&&
-           Math.abs(occupiedCenters[k][1]-oy)<mh*0.9)return true;
+    /* 기존 모듈 → 로컬 AABB */
+    function _toLoc(m){
+      var xs=[],ys=[];
+      m.forEach(function(p){var q=rp(p[0],p[1],-a);xs.push(q[0]);ys.push(q[1]);});
+      return{x0:Math.min.apply(null,xs),x1:Math.max.apply(null,xs),
+             y0:Math.min.apply(null,ys),y1:Math.max.apply(null,ys)};
+    }
+    var occL=res.map(_toLoc);
+
+    /* 겹침 체크: X이격<scg AND Y이격<sns → 배치불가 */
+    function occCheck(lx,ly,lw,lh){
+      var lx1=lx+lw, ly1=ly+lh;
+      for(var k=0;k<occL.length;k++){
+        var b=occL[k];
+        var gx=Math.max(lx-b.x1, b.x0-lx1, 0);
+        var gy=Math.max(ly-b.y1, b.y0-ly1, 0);
+        if(gx<scg-tol && gy<sns-tol)return true;
       }
       return false;
     }
 
-    /* 메인 배치 실패한 자리(격자)에서만 서브 스팬 시도 */
-    for(var r2=0;r2<nRows;r2++)
-      for(var c2=0;c2<nCols;c2++){
-        if(mainGrid[r2+','+c2])continue; /* 메인 성공 자리 스킵 */
-        var mx0=bb.x0+c2*pX, my0=bb.y0+r2*pY;
-        /* 메인 스팬 크기 영역 안에서 서브 스팬 피치로 배치 */
-        for(var rr3=0;rr3<Math.ceil((sH+sns)/pY3)+1;rr3++)
-          for(var cc3=0;cc3<Math.ceil((sW+scg)/pX3)+1;cc3++){
-            var sx3=mx0+cc3*pX3, sy3=my0+rr3*pY3;
-            if(isOccupied(sx3+mw/2,sy3+mh/2))continue;
-            var subMods=trySpan(sx3,sy3,sc3,sr3);
-            if(subMods){
-              subMods.forEach(function(m){
-                var sx4=0,sy4=0;m.forEach(function(p){sx4+=p[0];sy4+=p[1];});
-                occupiedCenters.push([sx4/m.length,sy4/m.length]);
-                res.push(m);
-              });
+    window._subSpanStart=res.length;
+
+    /* ── 배치 로직 ──
+       메인 실패 셀(r,c)의 cellX = bb.x0 + c*pX 에서 서브 스팬 시작.
+       왼쪽 메인 끝 = cellX - scg  → 서브 시작(cellX)과 거리 = scg ✓
+       서브끼리 피치 = spX = subW + scg           → 서브 간격 = scg ✓
+       오른쪽 메인 시작 = cellX + pX              → 서브 끝 이후 간격 >= scg ✓
+       Y방향도 동일: cellY 시작, spY 피치
+    */
+    for(var mr=0;mr<nRows;mr++){
+      for(var mc=0;mc<nCols;mc++){
+        if(mainGrid[mr+','+mc])continue;
+        var cellX=bb.x0+mc*pX, cellY=bb.y0+mr*pY;
+        /* 셀의 X/Y 후보 위치:
+           정방향(왼→오): cellX + cc*spX
+           역방향(오→왼): cellX + pX - subW - scg - cc*spX
+             → 오른쪽 메인과 scg 간격 보장하면서 왼쪽으로 진행
+           두 방향 모두 수집 후 중복 제거, 정렬해서 시도 */
+        function _cands(cStart, cSize, subSz, pitch, gap){
+          var out=[], seen={}, maxN=Math.ceil(cSize/pitch)+2;
+          for(var i=0;i<maxN;i++){
+            var fwd=cStart+i*pitch;              /* 정방향 */
+            var bwd=cStart+cSize-subSz-gap-i*pitch; /* 역방향 */
+            [fwd,bwd].forEach(function(v){
+              var key=Math.round(v*10000);
+              if(!seen[key]){seen[key]=true;out.push(v);}
+            });
+          }
+          out.sort(function(a,b){return a-b;});
+          return out;
+        }
+        var axX=_cands(cellX, pX, subW, spX, scg);
+        var axY=_cands(cellY, pY, subH, spY, sns);
+        for(var ri=0;ri<axY.length;ri++){
+          for(var ci=0;ci<axX.length;ci++){
+            var sx=axX[ci], sy=axY[ri];
+            /* 셀 범위 초과 체크 — 양쪽 메인과 최소 scg/sns 간격 보장 */
+            if(sx < cellX-tol || sx+subW > cellX+pX-scg+tol)continue;
+            if(sy < cellY-tol || sy+subH > cellY+pY-sns+tol)continue;
+            if(occCheck(sx,sy,subW,subH))continue;
+            var sm=trySpan(sx,sy,sc3,sr3);
+            if(sm){
+              sm.forEach(function(m){occL.push(_toLoc(m));res.push(m);});
             }
           }
+        }
       }
+    }
   }
   function ew(){
     var feAxis=window._feAxis||'ew';
@@ -1491,9 +1546,16 @@ function _rebuildFromPosts(){
     });
   } else {
     modPoly.forEach(function(p){map.removeLayer(p);}); modPoly=[];
+    var subStart2=window._subSpanStart!=null?window._subSpanStart:mods.length;
     mods.forEach(function(m,idx){
       var co=m.map(function(xy){var ll=xy2ll(xy[0],xy[1]);return[ll[0],ll[1]];});
-      var pg=L.polygon(co,{color:'#ff7700',fillColor:'#3fb950',fillOpacity:.55,weight:2});
+      var isSub=idx>=subStart2;
+      var pg=L.polygon(co,{
+        color: isSub?'#1a6bcc':'#ff7700',
+        fillColor: isSub?'#58a6ff':'#3fb950',
+        fillOpacity: isSub?.65:.55,
+        weight:2
+      });
       pg._modIdx=idx;attachMoveEvents(pg,idx);pg.addTo(map);modPoly.push(pg);
     });
   }
@@ -1517,9 +1579,17 @@ function _rebuildFromPosts(){
 function drawMods(){
   _clearDualCircles();
   modPoly.forEach(function(p){map.removeLayer(p);}); modPoly=[];
+  var subStart=window._subSpanStart!=null?window._subSpanStart:mods.length;
   mods.forEach(function(m,idx){
     var co=m.map(function(xy){var ll=xy2ll(xy[0],xy[1]);return[ll[0],ll[1]];});
-    var pg=L.polygon(co,{color:'#ff7700',fillColor:'#3fb950',fillOpacity:.55,weight:2});
+    /* 서브 스팬: 파란색 / 메인: 기존 녹색 */
+    var isSub=idx>=subStart;
+    var pg=L.polygon(co,{
+      color: isSub?'#1a6bcc':'#ff7700',
+      fillColor: isSub?'#58a6ff':'#3fb950',
+      fillOpacity: isSub?.65:.55,
+      weight:2
+    });
     pg._modIdx=idx;
     attachMoveEvents(pg,idx);
     pg.addTo(map);modPoly.push(pg);
@@ -1529,9 +1599,254 @@ function drawMods(){
   updMetrics();redrawPoly();
   try{_syncCompass(false);}catch(e){}
 }
+/* ══ 확장 배치 ══
+   원칙:
+   - 메인 스팬만 행(row) 단위로 X방향 이동 → Y(남북) 이격 완전 유지
+   - 이동 후 빈 공간에 메인 스팬 추가
+   - 서브 스팬은 이동 후 재계산(calcMods 내부 서브 로직과 동일하게)
+*/
+window.runExpandLayout=function(){
+  if(!pts.length||!_typeSelected)return;
+  if(iType!=='fs')return;
+
+  setCtr(pts);
+  var lp2=pts.map(function(p){return ll2xy(p[0],p[1]);});
+  var a2=d2r(-rotA);
+  var dim=getModDim(),mw=dim.mw,mh=dim.mh,mg=dim.mg;
+  var sc2=gi('sc'),sr2=gi('sr'),scg=gv('scg')/1000,sns=gv('sns')/1000;
+  var borderOff=(gv('mborder')||0)/1000;
+  var sW=sc2*(mw+mg)-mg, sH=sr2*(mh+mg)-mg;
+  var pX=sW+scg, pY=sH+sns;
+  var bb=getBB(lp2,a2);
+  var tol=mg*0.05;
+  var spanSize=sc2*sr2;
+
+  function trySpanAt(lx,ly){
+    var sm=[];
+    for(var rr=0;rr<sr2;rr++)
+      for(var cc=0;cc<sc2;cc++){
+        var m=mkM(lx+cc*(mw+mg),ly+rr*(mh+mg),mw,mh,a2,lp2,borderOff);
+        if(!m)return null;
+        sm.push(m);
+      }
+    return sm;
+  }
+
+  function modOrigin(mod){
+    var xs=[],ys=[];
+    mod.forEach(function(p){var q=rp(p[0],p[1],-a2);xs.push(q[0]);ys.push(q[1]);});
+    return{x:Math.min.apply(null,xs),y:Math.min.apply(null,ys)};
+  }
+
+  /* 메인 스팬만 추출 (_subSpanStart 기준) */
+  var subStart=window._subSpanStart!=null?window._subSpanStart:mods.length;
+  var mainMods=mods.slice(0,subStart);
+
+  /* 메인 스팬 위치 수집 (spanSize 단위) */
+  var curPos=[];
+  for(var i=0;i<mainMods.length;i+=spanSize){
+    var grp=mainMods.slice(i,i+spanSize);
+    if(grp.length<spanSize)continue;
+    var o=modOrigin(grp[0]);
+    curPos.push({x:o.x,y:o.y});
+  }
+
+  /* 행 단위 그룹화 (Y 기준) */
+  var rowMap={};
+  curPos.forEach(function(p,i){
+    var rowIdx=Math.round((p.y-bb.y0)/pY);
+    if(!rowMap[rowIdx])rowMap[rowIdx]=[];
+    rowMap[rowIdx].push(i);
+  });
+
+  var newPos=curPos.map(function(p){return{x:p.x,y:p.y};});
+
+  /* 각 행을 X+ 방향으로 최대한 이동 */
+  Object.keys(rowMap).forEach(function(rowIdx){
+    var idxs=rowMap[rowIdx];
+    idxs.sort(function(a,b){return newPos[a].x-newPos[b].x;});
+    var rowY=newPos[idxs[0]].y;
+    var baseX=newPos[idxs[0]].x;
+    var offsets=idxs.map(function(i){return newPos[i].x-baseX;});
+    var bestShift=0;
+    for(var shift=pX*0.1;shift<=bb.x1-bb.x0;shift+=pX*0.1){
+      var ok=true;
+      for(var k=0;k<idxs.length;k++){
+        if(!trySpanAt(baseX+offsets[k]+shift,rowY)){ok=false;break;}
+      }
+      if(ok)bestShift=shift; else break;
+    }
+    for(var k=0;k<idxs.length;k++)
+      newPos[idxs[k]].x=baseX+offsets[k]+bestShift;
+  });
+
+  /* 이동된 메인 스팬 재생성 */
+  var newMods=[];
+  var finalPos=[];
+  newPos.forEach(function(p){
+    var sm=trySpanAt(p.x,p.y);
+    if(sm){finalPos.push(p);sm.forEach(function(m){newMods.push(m);});}
+  });
+
+  /* 겹침 체크 */
+  function occExp(lx,ly){
+    for(var k=0;k<finalPos.length;k++){
+      var p=finalPos[k];
+      var gx=Math.max(lx-(p.x+sW),p.x-(lx+sW),0);
+      var gy=Math.max(ly-(p.y+sH),p.y-(ly+sH),0);
+      if(gx<scg-tol&&gy<sns-tol)return true;
+    }
+    return false;
+  }
+
+  /* 빈 공간에 메인 스팬 추가 */
+  var nRows2=Math.ceil((bb.y1-bb.y0)/pY)+3;
+  var nCols2=Math.ceil((bb.x1-bb.x0)/pX)+3;
+  var mainGrid2={};
+  finalPos.forEach(function(p){
+    var ri=Math.round((p.y-bb.y0)/pY),ci=Math.round((p.x-bb.x0)/pX);
+    mainGrid2[ri+','+ci]=true;
+  });
+  for(var r=0;r<nRows2;r++)
+    for(var c=0;c<nCols2;c++){
+      if(mainGrid2[r+','+c])continue;
+      var lx=bb.x0+c*pX,ly=bb.y0+r*pY;
+      if(occExp(lx,ly))continue;
+      var sm=trySpanAt(lx,ly);
+      if(sm){
+        finalPos.push({x:lx,y:ly});
+        mainGrid2[r+','+c]=true;
+        sm.forEach(function(m){newMods.push(m);});
+      }
+    }
+
+  /* 메인 스팬 적용 */
+  mods=newMods;
+  window._subSpanStart=newMods.length; /* 서브 스팬 시작 인덱스 */
+
+  /* 서브 스팬 ON이면 재배치
+     핵심: finalPos(실제 이동된 메인 위치) 기준으로
+           각 메인 스팬의 상하좌우 빈 공간을 셀로 잡아 서브 배치
+           셀 = 메인 스팬 끝 + scg/sns 간격부터 시작 */
+  var subOn=document.getElementById('sub-span-on');
+  if(subOn&&subOn.checked){
+    var sc3=parseInt((document.getElementById('sc2')||{}).value)||3;
+    var sr3=parseInt((document.getElementById('sr2')||{}).value)||2;
+    var subW=sc3*(mw+mg)-mg,subH=sr3*(mh+mg)-mg;
+    var spX=subW+scg,spY=subH+sns;
+
+    function toLoc2(m){
+      var xs=[],ys=[];
+      m.forEach(function(p){var q=rp(p[0],p[1],-a2);xs.push(q[0]);ys.push(q[1]);});
+      return{x0:Math.min.apply(null,xs),x1:Math.max.apply(null,xs),
+             y0:Math.min.apply(null,ys),y1:Math.max.apply(null,ys)};
+    }
+    var occL2=mods.map(toLoc2);
+
+    function occCheck2(lx,ly,lw,lh){
+      var lx1=lx+lw,ly1=ly+lh;
+      for(var k=0;k<occL2.length;k++){
+        var b=occL2[k];
+        var gx=Math.max(lx-b.x1,b.x0-lx1,0);
+        var gy=Math.max(ly-b.y1,b.y0-ly1,0);
+        if(gx<scg-tol&&gy<sns-tol)return true;
+      }
+      return false;
+    }
+
+    function trySubAt(lx,ly){
+      var sm=[];
+      for(var rr=0;rr<sr3;rr++)
+        for(var cc=0;cc<sc3;cc++){
+          var m=mkM(lx+cc*(mw+mg),ly+rr*(mh+mg),mw,mh,a2,lp2,borderOff);
+          if(!m)return null;
+          sm.push(m);
+        }
+      return sm;
+    }
+
+    function _cands2(cS,cE,subSz,pitch,gap){
+      var out=[],seen={},maxN=Math.ceil((cE-cS)/pitch)+2;
+      for(var i=0;i<maxN;i++){
+        var v1=cS+i*pitch,v2=cE-subSz-gap-i*pitch;
+        [v1,v2].forEach(function(v){
+          var key=Math.round(v*10000);
+          if(!seen[key]){seen[key]=true;out.push(v);}
+        });
+      }
+      out.sort(function(a,b){return a-b;});
+      return out;
+    }
+
+    /* 각 메인 스팬(finalPos) 기준으로 서브 후보 위치 생성
+       후보 X = 메인.x + sW + scg + cc*spX  (메인 오른쪽)
+              = 메인.x - subW - scg - cc*spX (메인 왼쪽)
+       후보 Y = 메인.y + sH + sns + rr*spY  (메인 아래)
+              = 메인.y - subH - sns - rr*spY (메인 위)
+       → 메인과 정확히 scg/sns 간격부터 시작
+       occCheck2로 기존 모두와 간격 체크 후 배치 */
+    var maxTiles=Math.ceil(Math.max(bb.x1-bb.x0,bb.y1-bb.y0)/Math.min(spX,spY))+2;
+    var subCandSet={};
+    finalPos.forEach(function(p){
+      /* 오른쪽 방향 X 후보 */
+      for(var cc=0;cc<maxTiles;cc++){
+        var cx=p.x+sW+scg+cc*spX;
+        if(cx>bb.x1+spX)break;
+        /* 모든 Y: 메인 Y에서 위아래로 */
+        for(var rr=-(maxTiles);rr<=maxTiles;rr++){
+          var cy=p.y+rr*spY;
+          var k=Math.round(cx*1000)+'|'+Math.round(cy*1000);
+          if(!subCandSet[k])subCandSet[k]={x:cx,y:cy};
+        }
+      }
+      /* 왼쪽 방향 X 후보 */
+      for(var cc=0;cc<maxTiles;cc++){
+        var cx=p.x-subW-scg-cc*spX;
+        if(cx<bb.x0-spX)break;
+        for(var rr=-(maxTiles);rr<=maxTiles;rr++){
+          var cy=p.y+rr*spY;
+          var k=Math.round(cx*1000)+'|'+Math.round(cy*1000);
+          if(!subCandSet[k])subCandSet[k]={x:cx,y:cy};
+        }
+      }
+      /* 같은 X, 아래 Y */
+      for(var rr=1;rr<maxTiles;rr++){
+        var cy=p.y+sH+sns+(rr-1)*spY;
+        if(cy>bb.y1+spY)break;
+        var k=Math.round(p.x*1000)+'|'+Math.round(cy*1000);
+        if(!subCandSet[k])subCandSet[k]={x:p.x,y:cy};
+      }
+      /* 같은 X, 위 Y */
+      for(var rr=1;rr<maxTiles;rr++){
+        var cy=p.y-subH-sns-(rr-1)*spY;
+        if(cy<bb.y0-spY)break;
+        var k=Math.round(p.x*1000)+'|'+Math.round(cy*1000);
+        if(!subCandSet[k])subCandSet[k]={x:p.x,y:cy};
+      }
+    });
+
+    Object.keys(subCandSet).forEach(function(k){
+      var c=subCandSet[k];
+      if(occCheck2(c.x,c.y,subW,subH))return;
+      var sm=trySubAt(c.x,c.y);
+      if(sm){sm.forEach(function(m){occL2.push(toLoc2(m));mods.push(m);});}
+    });
+  }
+
+  drawMods();
+  setSt('✅ 확장 완료 — '+finalPos.length+'스팬 / 총 '+mods.length+'장','g');
+};
+
 function calcAndDraw(){
   if(!_typeSelected)return; /* 설치 유형 미선택 시 배치 안 함 */
-  mods=calcMods();deletedStack=[];drawMods();
+  window._subSpanStart=null; /* 서브 스팬 인덱스 리셋 */
+  mods=calcMods();deletedStack=[];
+  var expOn=document.getElementById('expand-on');
+  if(expOn&&expOn.checked&&iType==='fs'){
+    setTimeout(function(){runExpandLayout();},0);
+  } else {
+    drawMods();
+  }
 }
 var _tryLTimer=null;
 window.tryL=function(){
@@ -3512,7 +3827,7 @@ function _deleteByIndices(indices,label){
 
 /* 고정식 경계 걸림 스판 전체 삭제 (clipToBoundary 대체) */
 
-/* ── 자동 최적 각도 탐색 ── */
+/* ── 자동 최적 탐색 (발전량 최우선) ── */
 window.autoOptimizeAngle=function(){
   if(!pts.length||!_typeSelected){setSt('먼저 부지를 그려주세요','r');return;}
   var btn=document.getElementById('btn-auto-opt');
@@ -3521,34 +3836,54 @@ window.autoOptimizeAngle=function(){
   if(result)result.style.display='none';
 
   setTimeout(function(){
-    function southDist(a){var n=((a%180)+180)%180;return Math.min(n,180-n);}
-    var best={ang:0,cnt:-1};
+    var tilt=parseFloat((document.getElementById('mod-tilt')||{}).value)||15;
+    var hasPvgis=(_pvgisGhiRaw&&_pvgisGhiRaw.length&&_pvgisLat!==null);
+    var modKw=parseFloat((document.getElementById('mp')||{}).value||655)/1000;
 
-    /* 1단계: 5° 단위 전체 탐색 — 수량 최대, 동률이면 남향 우선 */
+    /* ── 모든 유형: 회전 각도 탐색 (사용자 간격 설정 변경 없음) ── */
+    /* 단축/양축도 회전각에 따라 배치 수량이 달라지므로 동일하게 각도 탐색 */
+    function southDist(a){var n=((a%180)+180)%180;return Math.min(n,180-n);}
+    function score(ang,cnt){
+      if(cnt===0)return -1;
+      if(hasPvgis){
+        var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,ang);
+        return cnt*poa;
+      }
+      var sd=southDist(ang);
+      return cnt*(1+0.15*(1-sd/90));
+    }
+
+    var best={ang:0,cnt:0,score:-1};
     for(var ang=0;ang<180;ang+=5){
       rotA=ang;
       var cnt=calcMods().length;
-      if(cnt>best.cnt||(cnt===best.cnt&&southDist(ang)<southDist(best.ang)))
-        best={ang:ang,cnt:cnt};
+      var sc=score(ang,cnt);
+      if(sc>best.score)best={ang:ang,cnt:cnt,score:sc};
     }
-
-    /* 2단계: ±6° 1° 세밀 탐색 */
-    for(var a2=Math.max(0,best.ang-6);a2<=Math.min(179,best.ang+6);a2++){
+    for(var a2=Math.max(0,best.ang-8);a2<=Math.min(179,best.ang+8);a2++){
       rotA=a2;
       var c2=calcMods().length;
-      if(c2>best.cnt||(c2===best.cnt&&southDist(a2)<southDist(best.ang)))
-        best={ang:a2,cnt:c2};
+      var sc2=score(a2,c2);
+      if(sc2>best.score)best={ang:a2,cnt:c2,score:sc2};
     }
 
     setRot(best.ang);
     if(btn){btn.textContent='✦ 최적 각도 자동 탐색';btn.disabled=false;}
     var sd=southDist(best.ang);
     var dir=sd<=5?'정남향':sd<=20?'남향권':sd<=45?'남동/남서향':'동/서향';
-    if(result){
-      result.style.display='block';
-      result.textContent='✅ '+best.ang+'° ('+dir+') → '+best.cnt+'장';
+    var resText='✅ '+best.ang+'° ('+dir+') → '+best.cnt+'장';
+    if(hasPvgis){
+      var totalKwp=best.cnt*modKw;
+      var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,best.ang);
+      /* 추적식 발전량 보정: 단축+11%, 양축+23% */
+      var trackMult=iType==='fe'?1.11:iType==='fd'?1.23:1.0;
+      var genKwh=Math.round(totalKwp*poa*0.78*trackMult);
+      resText+=' / '+genKwh.toLocaleString()+' kWh/년';
     }
-    setSt('✅ 최적각도 '+best.ang+'° ('+best.cnt+'장) 적용','g');
+    if(result){result.style.display='block';result.textContent=resText;}
+    var typeLabel=iType==='fe'?'단축식':iType==='fd'?'양축식':'고정식';
+    setSt('✅ '+typeLabel+' 최적각도 '+best.ang+'° ('+best.cnt+'장'+
+      (hasPvgis?' · 발전량 최적화':' · 남향 최적화')+') 적용','g');
   },50);
 };
 var _curTab=4;
@@ -4333,118 +4668,196 @@ var _manualCurrentTool='all';
 
 var _manualToolContent={
   all:`
-<div style="font-size:14px;font-weight:900;color:#f7c948;text-align:center;padding:12px 0 4px;letter-spacing:1px">📖 SOLARDESIGN 전체 사용 가이드</div>
-<div style="font-size:13px;color:#dde4ed;text-align:center;margin-bottom:14px">아래 순서대로 따라하면 누구나 5분 안에 완성!</div>
+<div style="font-size:15px;font-weight:900;color:#f7c948;text-align:center;padding:14px 0 4px;letter-spacing:1px">📖 SOLARDESIGN 전체 사용 가이드</div>
+<div style="font-size:12px;color:#8b949e;text-align:center;margin-bottom:14px">순서대로 따라하면 누구나 완성할 수 있습니다</div>
 
 <!-- STEP 0: 화면 구성 -->
-<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(247,201,72,.14);padding:9px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#f7c948;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">화면 구성</div>
-    <span style="font-size:14px;font-weight:700;color:#f7c948">상단 툴바 + 지도 + 오른쪽 패널</span>
+<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(247,201,72,.14);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">화면 구성</div>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">상단 툴바 / 지도 / 오른쪽 패널</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    <b style="color:#f7c948">📲 앱 다운로드</b> — HTML 파일 저장 / GitHub Pages 배포 안내<br>
-    <b style="color:#ff7700">● 그리기</b> — 부지 경계선 그리기<br>
-    <b style="color:#8b949e">✥ 이동</b> — 지도 이동/줌<br>
-    <b style="color:#58a6ff">⤢ 모듈이동 ▾</b> — 확장배치이동 / 전체배치이동 / 개별모듈이동<br>
-    <b style="color:#f85149">✂ 삭제 ▾</b> — 단일 / 드래그 / 스판 삭제<br>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#f7c948">📲 앱 설치</b> — 홈화면에 앱으로 설치 (크롬 전용)<br>
+    <b style="color:#f7c948">💾 저장 ▾</b> — 현장 저장·불러오기 (JSON)<br>
+    <b style="color:#ff7700">● 그리기</b> — 부지 경계선 그리기 모드<br>
+    <b style="color:#8b949e">✥ 이동</b> — 지도 이동 / 줌<br>
+    <b style="color:#58a6ff">⤢ 모듈이동 ▾</b> — 확장배치이동 / 전체배치이동 / 개별이동<br>
+    <b style="color:#bc8cff">✂ 삭제 ▾</b> — 단일 / 드래그 / 스판 삭제<br>
     <b style="color:#3fb950">✓ 확정</b> — 현재 부지 확정 저장<br>
-    <b style="color:#58a6ff">★ 완성</b> — 전체 완성 후 보고서 생성
+    <b style="color:#58a6ff">★ 완성</b> — 전체 완료 후 보고서 생성<br>
+    <b style="color:#f0f6fc">오른쪽 패널 탭</b>: 설정 / 배치·회전 / 부지목록 / 보고서
   </div>
 </div>
 
-<!-- STEP 1 -->
-<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(255,119,0,.12);padding:9px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#ff7700;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">STEP 1</div>
-    <span style="font-size:14px;font-weight:700;color:#ff9944">현장 설정 — 설정 탭</span>
+<!-- STEP 1: 현장 설정 -->
+<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(255,119,0,.12);padding:8px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#ff7700;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 1</div>
+    <span style="font-size:13px;font-weight:700;color:#ff9944">현장 설정 — 설정 탭</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    <b style="color:#ff9944">① 현장명 입력</b> → <b style="color:#ff9944">② 주소 검색</b> (자동으로 지도 이동)<br>
-    <b style="color:#f0f6fc">■ 설치 유형 선택</b><br>
-    &nbsp;&nbsp;• <b>지붕형</b>: 평판식, 인삼밭식<br>
-    &nbsp;&nbsp;• <b>노지형</b>: 고정식(스판 배치), 단축식(추적기), 양축식(2축 추적기)<br>
-    <b style="color:#f0f6fc">■ 모듈 사양</b>: 폭·높이·출력·간격·경계이격 설정<br>
-    <b style="color:#f0f6fc">■ 경사각</b>: 프리셋 버튼(10/15/20/25/30°) 또는 슬라이더로 설정
-  </div>
-</div>
-
-<!-- STEP 2 -->
-<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(255,119,0,.12);padding:9px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#ff7700;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">STEP 2</div>
-    <span style="font-size:14px;font-weight:700;color:#ff9944">부지 그리기 — ● 그리기 버튼</span>
-  </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    <b style="color:#ff7700">● 그리기</b> 클릭 → 서브패널에서 자유그리기 / 직사각형 / 원형 선택<br>
-    지도 클릭으로 꼭짓점 추가 → 자동으로 모듈 배치 미리보기<br>
-    꼭짓점을 드래그하여 수정 가능 (◈ 점수정 모드)<br>
-    변을 클릭하면 길이 직접 입력 가능
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#ff9944">① 현장명 입력</b> — 보고서에 사용될 현장 이름<br>
+    <b style="color:#ff9944">② 주소 검색</b> — 주소 입력 후 🔍 클릭 → 지도 자동 이동 + 일사량 데이터(PVGIS) 자동 로드<br>
+    <span style="color:#f7c948;padding-left:10px">💡 주소 검색을 해야 실측 일사량 기반 발전량 계산이 활성화됩니다</span><br>
+    <b style="color:#ff9944">③ 모듈 사양 입력</b> — 폭(mm) / 높이(mm) / 출력(W) / 모듈간격(mm)<br>
+    <b style="color:#ff9944">④ 설치 유형 선택</b><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">평판식(지붕)</b> — 경사지붕에 빽빽하게 배치</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">인삼밭식</b> — 행 간격(남북 이격) 지정 배치</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">고정식(스판)</b> — 스판 단위 배치 + 서브 스판 자동 채움</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">단축식(1축 추적)</b> — 동서 또는 남북 추적</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">양축식(2축 추적)</b> — 포스트 간격 기반 2축 추적</span><br>
+    <b style="color:#ff9944">⑤ 경사각 설정</b> — 버튼(10°/15°/20°/25°/30°) 또는 직접 입력, 슬라이더 조정<br>
+    <span style="color:#f7c948;padding-left:10px">💡 경사각 변경 즉시 POA·발전량 자동 재계산</span><br>
+    <b style="color:#ff9944">⑥ 지역 선택</b> — PVGIS 미조회 시 지역별 평균 발전량 사용<br>
+    <b style="color:#ff9944">⑦ 경계 이격</b> — 부지 경계에서 모듈까지 최소 이격거리(mm)
   </div>
 </div>
 
-<!-- STEP 3 -->
-<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(247,201,72,.12);padding:9px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#f7c948;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">STEP 3</div>
-    <span style="font-size:14px;font-weight:700;color:#f7c948">배치 최적화 — 배치/회전 탭</span>
+<!-- STEP 2: 고정식 스판 설정 -->
+<div style="background:#1c2230;border:1px solid rgba(88,166,255,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(88,166,255,.12);padding:8px 14px;border-bottom:1px solid rgba(88,166,255,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 2</div>
+    <span style="font-size:13px;font-weight:700;color:#79c0ff">고정식 스판 설정 (고정식 선택 시)</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    <b style="color:#f7c948">회전 슬라이더</b>로 각도 조정 (드래그 중 경계 근처 모듈만 미리보기 → 빠름)<br>
-    <b style="color:#3fb950">✦ 최적 각도 자동 탐색</b> — 모듈 수 최대인 각도 자동 탐색, 동률이면 남향 우선<br>
-    <b style="color:#f0f6fc">고정식 스판 설정</b>: 메인 스판(가로×세로 장수, 간격, 남북이격)<br>
-    &nbsp;&nbsp;+ <b>서브 스판</b> 체크박스 ON → 경계 근처 빈 자리에 작은 스판 자동 배치<br>
-    <b style="color:#f0f6fc">단축식 설정</b>: 동서축 / 남북축 추적 선택, 열당 장수, 포스트 간격(2,000~20,000mm)<br>
-    남북이격 권장값 힌트 자동 표시 (최소 27° / 권장 23° 기준)
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#79c0ff">스판 가로/세로</b> — 메인 스판 1개의 모듈 배열 수 (예: 가로 5장 × 세로 4장)<br>
+    <b style="color:#79c0ff">스판 간격(동서)</b> — 스판 사이 동서 방향 간격(mm)<br>
+    <b style="color:#79c0ff">남북 이격(행간격)</b> — 스판 사이 남북 방향 이격거리(mm). 일조권 확보용<br>
+    <span style="color:#f7c948;padding-left:10px">💡 남북 이격 힌트가 자동 계산됩니다 (경사각·모듈 높이 기준)</span><br>
+    <b style="color:#79c0ff">서브 스판 (체크박스)</b> — 메인 스판이 못 들어간 빈 자리를 작은 스판으로 자동 채움<br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">서브 가로/세로</b>: 서브 스판 배열 수 (메인보다 작게 설정)</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 서브 스판은 메인 스판 실패 격자에만 배치되며, 메인과 절대 겹치지 않습니다</span>
   </div>
 </div>
 
-<!-- STEP 4 -->
-<div style="background:#1c2230;border:1px solid rgba(88,166,255,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(88,166,255,.12);padding:9px 14px;border-bottom:1px solid rgba(88,166,255,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">STEP 4</div>
-    <span style="font-size:14px;font-weight:700;color:#7ab8ff">모듈 수정 — 이동 / 삭제</span>
+<!-- STEP 3: 부지 그리기 -->
+<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(255,119,0,.12);padding:8px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#ff7700;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 3</div>
+    <span style="font-size:13px;font-weight:700;color:#ff9944">부지 경계 그리기 — ● 그리기 버튼</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#ff9944">① ● 그리기</b> 클릭 → 지도에서 <b style="color:#f0f6fc">클릭으로 꼭짓점 추가</b><br>
+    <b style="color:#ff9944">② 마지막 꼭짓점에서 더블클릭</b> 또는 <b style="color:#ff9944">첫 꼭짓점 클릭</b> → 경계 완성 + 모듈 자동 배치<br>
+    <b style="color:#ff9944">③ 서브패널 도구</b><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">꼭짓점 추가</b>: 기본 그리기 모드</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">점 수정</b>: 기존 꼭짓점 드래그로 위치 조정</span><br>
+    <span style="padding-left:10px">• <b style="color:#f0f6fc">길이 수정</b>: 변의 정확한 길이 입력</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 위성지도 활용: 지적도로 경계 확인 → 위성으로 전환 후 그리기</span>
+  </div>
+</div>
+
+<!-- STEP 4: 배치 최적화 -->
+<div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(63,185,80,.12);padding:8px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 4</div>
+    <span style="font-size:13px;font-weight:700;color:#3fb950">배치 최적화 — 배치·회전 탭</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#3fb950">✦ 최적 각도 자동 탐색</b><br>
+    <span style="padding-left:10px">주소 검색 후 (PVGIS 데이터 있음): <b style="color:#f0f6fc">모듈수 × POA 발전량</b> 최대 각도 탐색</span><br>
+    <span style="padding-left:10px">주소 미검색 시: <b style="color:#f0f6fc">모듈수 × 남향 보너스</b> 방식으로 탐색</span><br>
+    <span style="padding-left:10px">→ 5° 간격 1차 탐색 후 ±8° 1° 세밀 탐색 (2단계)</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 주소 검색 먼저! 그래야 실제 발전량 기준으로 최적각을 찾습니다</span><br>
+    <b style="color:#f7c948">⟳ 회전 슬라이더</b> — 슬라이더 드래그 또는 방향 버튼으로 수동 조정<br>
     <b style="color:#58a6ff">⤢ 모듈이동 ▾</b><br>
-    &nbsp;&nbsp;• <b>확장 배치이동</b>: 전체 배치를 회전 + 이동, 경계 재계산<br>
-    &nbsp;&nbsp;• <b>전체 배치이동</b>: 모듈 전체를 드래그로 이동<br>
-    &nbsp;&nbsp;• <b>개별 모듈 이동</b>: 특정 모듈만 선택해서 드래그<br>
-    <b style="color:#f85149">✂ 삭제 ▾</b><br>
-    &nbsp;&nbsp;• <b>🖱 단일 삭제</b>: 클릭한 모듈 1장<br>
-    &nbsp;&nbsp;• <b>⬚ 드래그 삭제</b>: 드래그 범위 내 모듈 삭제<br>
-    &nbsp;&nbsp;• <b>▦ 스판 삭제</b>: mg(10mm) 간격으로 붙어있는 1스판 전체 자동 감지 삭제<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;(고정식: 6×2 스판 단위 / 단축식: 포스트 1열 전체 / 양축식: 원+점 포함)
+    <span style="padding-left:10px">• <b style="color:#a371f7">⤡ 확장 배치이동</b>: 경계 3배 확장 그리드 → 드래그 → ✓ OK</span><br>
+    <span style="padding-left:10px">• <b style="color:#58a6ff">🔲 전체 배치이동</b>: 현재 배치 그대로 전체 이동</span><br>
+    <span style="padding-left:10px">• <b style="color:#3fb950">📌 개별 모듈 이동</b>: 클릭으로 선택 → OK → 드래그</span><br>
+    <b style="color:#bc8cff">✂ 삭제 ▾</b><br>
+    <span style="padding-left:10px">• <b style="color:#bc8cff">🖱 단일 삭제</b>: 모듈 클릭 1장씩 제거</span><br>
+    <span style="padding-left:10px">• <b style="color:#bc8cff">⬚ 드래그 삭제</b>: 범위 드래그로 일괄 제거</span><br>
+    <span style="padding-left:10px">• <b style="color:#bc8cff">▦ 스판 삭제</b>: 클릭한 모듈의 스판 전체 제거</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 스판 삭제는 고정식에서 스판 단위로 제거할 때 유용합니다</span>
   </div>
 </div>
 
-<!-- STEP 5 -->
-<div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:12px">
-  <div style="background:rgba(63,185,80,.12);padding:9px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#3fb950;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">STEP 5</div>
-    <span style="font-size:14px;font-weight:700;color:#5fd47a">확정 및 완성</span>
+<!-- STEP 5: 확정 & 다중 부지 -->
+<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(247,201,72,.12);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 5</div>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">부지 확정 & 다중 부지</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    <b style="color:#3fb950">✓ 확정</b> — 현재 부지 배치 확정 (여러 부지 반복 가능)<br>
-    확정 후 <b>부지목록 탭</b>에서 각 부지별 모듈 수, 용량, 발전량 확인<br>
-    <b style="color:#58a6ff">★ 완성</b> — 전체 현장 완성 → 보고서 탭 자동 열림<br>
-    보고서 탭: <b>인쇄(PDF 저장)</b> / <b>수익 시뮬레이터</b> / 사진 첨부
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#3fb950">✓ 확정</b> 클릭 → 현재 부지+모듈 고정 → 부지목록 탭에 추가<br>
+    확정 후 <b style="color:#ff7700">● 그리기</b>로 새 부지 추가 가능 (현장 내 여러 부지)<br>
+    <b style="color:#f7c948">부지 수정</b>: 부지목록 탭 → 각 부지 카드 ✏ 수정 버튼<br>
+    <b style="color:#f85149">부지 삭제</b>: 부지목록 탭 🗑 삭제 또는 지도에서 경계선 더블클릭<br>
+    <b style="color:#f7c948">부지명 수정</b>: 부지목록 탭 입력란에서 직접 수정 (보고서에 반영)<br>
+    <span style="color:#f7c948;padding-left:10px">💡 부지마다 설치 유형·경사각·스판 설정을 다르게 할 수 있습니다</span>
   </div>
 </div>
 
-<!-- 앱 다운로드 안내 -->
-<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:4px">
-  <div style="background:rgba(247,201,72,.14);padding:9px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#f7c948;color:#000;font-weight:900;font-size:13px;border-radius:5px;padding:2px 9px">📲</div>
-    <span style="font-size:14px;font-weight:700;color:#f7c948">앱 다운로드 / 설치</span>
+<!-- STEP 6: 저장 & 불러오기 -->
+<div style="background:#1c2230;border:1px solid rgba(57,211,83,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(57,211,83,.12);padding:8px 14px;border-bottom:1px solid rgba(57,211,83,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#39d353;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 6</div>
+    <span style="font-size:13px;font-weight:700;color:#39d353">저장 & 불러오기</span>
   </div>
-  <div style="background:#0d1117;padding:12px 14px;font-size:12px;color:#dde4ed;line-height:1.9">
-    상단 <b style="color:#f7c948">📲 앱 다운로드</b> 버튼 클릭 → <b>SOLARDESIGN.html</b> 파일 저장<br>
-    저장한 파일을 크롬에서 열면 바로 사용 가능 (오프라인 지원)<br>
-    <b style="color:#f7c948">▾</b> 버튼 → GitHub Pages 배포 안내 확인<br>
-    <span style="color:#8b949e">※ 모든 데이터는 파일 안에 저장되므로 별도 서버 불필요</span>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#39d353">💾 저장</b> — 현재 작업 전체를 JSON 파일로 저장 (자동 파일명: 현장명)<br>
+    <b style="color:#f7c948">✏ 다른 이름으로 저장</b> — 다른 파일명으로 저장<br>
+    <b style="color:#79c0ff">📂 불러오기(파일)</b> — 저장된 JSON 파일 불러오기<br>
+    <b style="color:#dde4ed">📁 저장된 현장 목록</b> — 브라우저에 저장된 현장 바로 열기<br>
+    <span style="color:#f7c948;padding-left:10px">💡 중간 저장 습관: 확정할 때마다 저장하면 데이터 손실을 방지합니다</span>
   </div>
 </div>
+
+<!-- STEP 7: 보고서 -->
+<div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(63,185,80,.12);padding:8px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 7</div>
+    <span style="font-size:13px;font-weight:700;color:#3fb950">보고서 생성 & 출력</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#58a6ff">★ 완성</b> 클릭 → 보고서 탭 자동 이동<br>
+    보고서 포함 항목:<br>
+    <span style="padding-left:10px">• 현장명 / 주소</span><br>
+    <span style="padding-left:10px">• 부지별: 유형·모듈수·용량·면적·이격거리</span><br>
+    <span style="padding-left:10px">• 전체합계: 총 모듈수·총 용량(kW)·예상 발전량(MWh/년)</span><br>
+    <span style="padding-left:10px">• 배치현황 이미지(자동생성) + 첨부 사진</span><br>
+    <b style="color:#3fb950">🖨 인쇄</b> → 새 창 자동 열기 → PDF 저장 가능<br>
+    <b style="color:#dde4ed">📥 CSV</b> → 엑셀용 데이터 파일 다운로드<br>
+    <b style="color:#f7c948">📷 참고사진 첨부</b> → 첫 번째=메인(큰 사진), 나머지=참고(2열)<br>
+    <span style="color:#f7c948;padding-left:10px">💡 썸네일 드래그로 사진 순서 변경 가능</span><br>
+    <span style="color:#f85149;padding-left:10px">⚠ 사진 첨부 시 자동 배치현황 이미지는 숨겨집니다</span>
+  </div>
+</div>
+
+<!-- 발전량 산출 안내 -->
+<div style="background:#1c2230;border:1px solid rgba(163,113,247,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(163,113,247,.12);padding:8px 14px;border-bottom:1px solid rgba(163,113,247,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#a371f7;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">⚡ 발전량</div>
+    <span style="font-size:13px;font-weight:700;color:#a371f7">발전량 산출 방식</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#a371f7">PVGIS 실측 모드</b> (주소 검색 후 자동 활성화)<br>
+    <span style="padding-left:10px">Open-Meteo ERA5 일별 GHI → Erbs 모델 → POA 경사면 일사량 계산</span><br>
+    <span style="padding-left:10px">발전량 = POA × PR(0.78) × 설비용량(kWp)</span><br>
+    <span style="padding-left:10px">경사각/방위각 변경 시 실시간 재계산</span><br>
+    <b style="color:#8b949e">지역 평균 모드</b> (주소 미검색 시)<br>
+    <span style="padding-left:10px">전남·전북·경남·경북 등 지역별 연평균값 사용</span><br>
+    <b style="color:#79c0ff">유형별 보정</b><br>
+    <span style="padding-left:10px">단축식: 고정식 대비 +11% / 양축식: +23%</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 최적 각도 탐색 시 PVGIS 모드에서는 실제 발전량 기준으로 각도를 선택합니다</span>
+  </div>
+</div>
+
+<!-- 단축키 & 팁 -->
+<div style="background:#1c2230;border:1px solid #30363d;border-radius:10px;overflow:hidden">
+  <div style="background:#161b22;padding:8px 14px;border-bottom:1px solid #30363d">
+    <span style="font-size:13px;font-weight:700;color:#8b949e">⌨ 단축키 & 팁</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
+    <b style="color:#f0f6fc">ESC</b> — 전체화면 모드 종료<br>
+    <b style="color:#f0f6fc">지도 스크롤</b> — 줌 인/아웃 (이동 모드에서)<br>
+    <b style="color:#f7c948">지적도 비율 고정</b>: 지적도 선택 → 🔒 비율고정 ON → 다른 지도 전환 가능<br>
+    <b style="color:#f7c948">다중 부지 팁</b>: 부지마다 다른 설치 유형 가능 (지붕+노지 혼합 현장)<br>
+    <b style="color:#f7c948">발전량 탭</b>: 설정 탭 하단에서 경제성 시뮬레이션 가능 (SMP·REC 단가 입력)
+  </div>
+</div>
+
 `,
       draw:`<div style="border:1px solid rgba(255,119,0,.3);border-radius:10px;overflow:hidden">
     <div style="background:rgba(255,119,0,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,119,0,.2)">
