@@ -64,20 +64,20 @@ html,body{height:100%;overflow:hidden}
 .stat-bar{background:var(--bg2);border-top:1px solid var(--border);padding:4px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap}
 .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 10px;display:flex;align-items:baseline;gap:5px}
 .stat-card .sv{font-size:20px;font-weight:700;color:var(--accent);font-family:monospace}
-.stat-card .sl{font-size:12px;color:var(--text3)}.stat-card .su{font-size:12px;color:var(--text2)}
+.stat-card .sl{font-size:13px;color:var(--text3)}.stat-card .su{font-size:13px;color:var(--text2)}
 .panel{width:300px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:9px 2px;font-size:12px;color:var(--text2);cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:.15s}
+.tab{flex:1;padding:9px 2px;font-size:13px;color:var(--text2);cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:.15s}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
 .pb{flex:1;overflow-y:auto;padding:12px}
 .sec{margin-bottom:14px}
-.sec-t{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.sec-t{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
 .row{display:flex;gap:5px;margin-bottom:6px;align-items:center}
 .lbl{font-size:13px;color:var(--text2);white-space:nowrap;min-width:75px}
 input[type=number],input[type=text],select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:13px;width:100%;font-family:inherit}
 input:focus,select:focus{outline:none;border-color:var(--accent)}
 select option{background:var(--bg3)}
-.unit{font-size:12px;color:var(--text3);white-space:nowrap}
+.unit{font-size:13px;color:var(--text3);white-space:nowrap}
 .orient-group{display:flex;gap:4px;margin-bottom:6px}
 .orient-btn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:13px;color:var(--text2);text-align:center;user-select:none;transition:all .15s}
 .orient-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(247,201,72,.1)}
@@ -92,10 +92,10 @@ select option{background:var(--bg3)}
 .bconfirm{background:var(--green);color:#000;border-color:var(--green);font-size:14px;font-weight:700;padding:10px}.bconfirm:hover{background:#2ea043}
 .bfinish{background:var(--blue);color:#000;border-color:var(--blue);font-size:14px;font-weight:700;padding:11px}.bfinish:hover{background:#3a8fde}
 .opt{margin-top:6px;padding:8px;background:var(--bg3);border-radius:5px;border:1px solid var(--border);display:none}.opt.on{display:block}
-.tip{font-size:12px;color:var(--text3);line-height:1.6;border-left:2px solid var(--accent);padding-left:6px;margin-top:4px}
-.sbar{background:var(--bg2);border-top:1px solid var(--border);padding:6px 12px;font-size:12px;color:var(--text2);display:flex;gap:10px;align-items:center;flex-shrink:0}
+.tip{font-size:13px;color:var(--text3);line-height:1.6;border-left:2px solid var(--accent);padding-left:6px;margin-top:4px}
+.sbar{background:var(--bg2);border-top:1px solid var(--border);padding:6px 12px;font-size:13px;color:var(--text2);display:flex;gap:10px;align-items:center;flex-shrink:0}
 .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.badge{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;background:rgba(247,201,72,.15);color:var(--accent);margin-left:auto;white-space:nowrap}
+.badge{padding:2px 8px;border-radius:3px;font-size:13px;font-weight:700;background:rgba(247,201,72,.15);color:var(--accent);margin-left:auto;white-space:nowrap}
 .badge.del-mode{background:rgba(188,140,255,.2);color:var(--purple)}
 .rc{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .rc input[type=range]{flex:1;accent-color:var(--accent)}
@@ -253,12 +253,14 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
       <span style="color:var(--accent);font-size:13px;align-self:center;flex-shrink:0" title="먼저 사용법을 확인하세요">▶</span>
       <button class="tb"        id="bpan"    onclick="panToggleWithMovePanel()">✥ 이동</button>
       <button class="tb"        id="bdraw"   onclick="toggleDrawPanel()" style="border-color:#ff7700;color:#ff7700;background:rgba(255,119,0,.08)">● 그리기 ▾</button>
+      <button class="tb" id="btn-auto-opt-tb" onclick="autoOptimizeAngle()" style="border-color:var(--green);color:var(--green);background:rgba(63,185,80,.08);font-weight:700">✦ 자동배치</button>
       <button class="tb tb-pc-only" id="bmove"   onclick="toggleMovePanel()" style="border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.08)">⤢ 모듈이동 ▾</button>
       <!-- 삭제 패널 버튼 -->
       <button class="tb del tb-pc-only" id="bdel" onclick="toggleDelPanel()" style="border-color:#f85149;color:#f85149;background:rgba(248,81,73,.08)">✂ 삭제 ▾</button>
       <button class="tb ok  tb-pc-only" id="bconf"   onclick="confirmZone()">✓ 확정</button>
       <button class="tb ng  tb-pc-only" onclick="resetAll()">✕ 초기화</button>
       <!-- 모바일 전용 ··· 버튼 -->
+      <button class="tb tb-mobile-only" onclick="autoOptimizeAngle()" style="border-color:var(--green);color:var(--green);background:rgba(63,185,80,.08);font-weight:700">✦ 자동</button>
       <div style="position:relative;display:inline-flex" class="tb-mobile-only">
         <button onclick="toggleMorePanel(event)" style="border:1px solid var(--border);color:var(--text);background:var(--bg2);font-weight:900;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:15px;font-family:inherit;letter-spacing:2px;min-width:40px">···</button>
         <div id="tb-more-panel" style="display:none;position:fixed;top:52px;right:4px;background:#161b22;border:1px solid #30363d;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.85);z-index:99999;padding:8px;min-width:160px;flex-direction:column;gap:4px">
@@ -296,6 +298,7 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
     <button id="bmove-exp" class="tb" onclick="setMoveSubMode('exp')" style="border-color:#a371f7;color:#a371f7">⤡ 확장 배치이동</button>
     <button id="bmove-all" class="tb" onclick="setMoveSubMode('all')" style="border-color:var(--blue);color:var(--blue)">🔲 전체 배치이동</button>
     <button id="bmove-sel" class="tb" onclick="setMoveSubMode('sel')" style="border-color:var(--green);color:var(--green)">📌 개별 모듈 이동</button>
+    <button id="bmove-span" class="tb" onclick="setMoveSubMode('span')" style="border-color:#f7c948;color:#f7c948">▦ 스판 이동</button>
     <span id="move-sel-hint" style="display:none;font-size:10px;color:var(--text2)">모듈 클릭 선택→OK</span>
     <button id="bmove-ok" onclick="confirmSelMove()" style="display:none;background:var(--green);color:#000;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">✓ OK</button>
     <button onclick="resetModsToSnapshot()" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:4px 9px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;white-space:nowrap">↺ 리셋</button>
@@ -523,6 +526,8 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
               <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">포스트 1개당 동서 방향 모듈 장수</div>
               <div class="row"><label class="lbl">포스트 간격</label><input type="number" id="e-ew-post" value="6500" min="2000" max="20000" oninput="tryL();_calcNsGapHint()" onblur="_clampPost(this)"><span class="unit">mm</span></div>
               <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">동서 포스트 중심 간격</div>
+              <div class="row"><label class="lbl" style="color:#f85149">열당 최소</label><input type="number" id="e-ew-minrow" value="0" min="0" oninput="tryL()" style="border-color:rgba(248,81,73,.4)"><span class="unit">장</span></div>
+              <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">미달 열(남북 방향) 전체 삭제 (0=사용안함)</div>
             </div>
             <!-- 남북축 추적 옵션 -->
             <div id="fe-opt-ns" style="display:none">
@@ -530,6 +535,8 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
               <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">포스트 1개당 남북 방향 모듈 장수</div>
               <div class="row"><label class="lbl">포스트 간격</label><input type="number" id="e-ns-post" value="4500" min="2000" max="20000" oninput="tryL();_calcNsGapHint()" onblur="_clampPost(this)"><span class="unit">mm</span></div>
               <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">남북 포스트 중심 간격</div>
+              <div class="row"><label class="lbl" style="color:#f85149">열당 최소</label><input type="number" id="e-ns-minrow" value="0" min="0" oninput="tryL()" style="border-color:rgba(248,81,73,.4)"><span class="unit">장</span></div>
+              <div style="font-size:9px;color:var(--text3);margin:-4px 0 4px 2px">미달 열(동서 방향) 전체 삭제 (0=사용안함)</div>
             </div>
             <div id="ns-gap-hint-fe" class="ns-gap-hint-box" style="display:none"></div>
           </div>
@@ -1273,20 +1280,19 @@ function calcMods(){
         }
       }
 
-    /* ── 서브 스팬 ──
-       규칙:
-       1. 크기 고정: 사용자 설정 sc3×sr3 그대로 — 절대 변경 안 함
-       2. 위치: 전역 격자 기준(bb.x0 + n*spX, bb.y0 + m*spY)으로 정렬
-          → 메인 스팬 격자와 동일한 좌표계에서 spX/spY 피치로 배열
-          → 메인/서브/서브끼리 모두 scg/sns 간격 자동 보장
-       3. 배치 조건: occCheck 통과 + trySpan 성공(경계 안)
+    /* ── 서브 스팬: BFS 연쇄 인접 배치 ──
+       1. 메인 스팬의 4방향(상/하/좌/우) 인접 위치 씨앗으로 시작
+       2. 서브 스팬이 배치되면 그 서브 스팬의 4방향도 큐에 추가
+       3. trySpan 성공 + 겹침없음 조건 통과시 배치
+       → 바둑판 전역 배치 X, 메인/서브 옆에만 연쇄 배치
     */
     var subOn=document.getElementById('sub-span-on');
-    if(!subOn||!subOn.checked)return;
+    var expOn2=document.getElementById('expand-on');
+    /* 확장배치 ON + fs 타입이면 서브스팬은 runExpandLayout에서 처리 */
+    if(!subOn||!subOn.checked||(expOn2&&expOn2.checked&&iType==='fs')){window._subSpanStart=res.length;return;}
     var sc3=parseInt((document.getElementById('sc2')||{}).value)||3;
     var sr3=parseInt((document.getElementById('sr2')||{}).value)||2;
     var subW=sc3*(mw+mg)-mg, subH=sr3*(mh+mg)-mg;
-    /* 서브 피치 = 서브크기 + 메인과 동일한 간격 */
     var spX=subW+scg, spY=subH+sns;
     var tol=mg*0.05;
 
@@ -1299,65 +1305,71 @@ function calcMods(){
     }
     var occL=res.map(_toLoc);
 
-    /* 겹침 체크: X이격<scg AND Y이격<sns → 배치불가 */
+    /* 겹침 체크: 두 스팬 사이 실제 간격이 지정값보다 작으면 차단
+       - 같은 행(gy=0): x간격 < scg → 차단
+       - 같은 열(gx=0): y간격 < sns → 차단
+       - 직접 겹침: 차단
+       - 대각: 두 조건 모두 위반 시 차단 */
     function occCheck(lx,ly,lw,lh){
       var lx1=lx+lw, ly1=ly+lh;
       for(var k=0;k<occL.length;k++){
         var b=occL[k];
         var gx=Math.max(lx-b.x1, b.x0-lx1, 0);
         var gy=Math.max(ly-b.y1, b.y0-ly1, 0);
-        if(gx<scg-tol && gy<sns-tol)return true;
+        /* 직접 겹침 */
+        if(gx<tol && gy<tol) return true;
+        /* 같은 행 (y범위 겹침): x간격 < scg */
+        if(gy<tol && gx<scg-tol) return true;
+        /* 같은 열 (x범위 겹침): y간격 < sns */
+        if(gx<tol && gy<sns-tol) return true;
+        /* 대각: 둘 다 부족 */
+        if(gx>tol && gy>tol && gx<scg-tol && gy<sns-tol) return true;
       }
       return false;
     }
 
     window._subSpanStart=res.length;
 
-    /* ── 배치 로직 ──
-       메인 실패 셀(r,c)의 cellX = bb.x0 + c*pX 에서 서브 스팬 시작.
-       왼쪽 메인 끝 = cellX - scg  → 서브 시작(cellX)과 거리 = scg ✓
-       서브끼리 피치 = spX = subW + scg           → 서브 간격 = scg ✓
-       오른쪽 메인 시작 = cellX + pX              → 서브 끝 이후 간격 >= scg ✓
-       Y방향도 동일: cellY 시작, spY 피치
-    */
-    for(var mr=0;mr<nRows;mr++){
-      for(var mc=0;mc<nCols;mc++){
-        if(mainGrid[mr+','+mc])continue;
-        var cellX=bb.x0+mc*pX, cellY=bb.y0+mr*pY;
-        /* 셀의 X/Y 후보 위치:
-           정방향(왼→오): cellX + cc*spX
-           역방향(오→왼): cellX + pX - subW - scg - cc*spX
-             → 오른쪽 메인과 scg 간격 보장하면서 왼쪽으로 진행
-           두 방향 모두 수집 후 중복 제거, 정렬해서 시도 */
-        function _cands(cStart, cSize, subSz, pitch, gap){
-          var out=[], seen={}, maxN=Math.ceil(cSize/pitch)+2;
-          for(var i=0;i<maxN;i++){
-            var fwd=cStart+i*pitch;              /* 정방향 */
-            var bwd=cStart+cSize-subSz-gap-i*pitch; /* 역방향 */
-            [fwd,bwd].forEach(function(v){
-              var key=Math.round(v*10000);
-              if(!seen[key]){seen[key]=true;out.push(v);}
-            });
-          }
-          out.sort(function(a,b){return a-b;});
-          return out;
-        }
-        var axX=_cands(cellX, pX, subW, spX, scg);
-        var axY=_cands(cellY, pY, subH, spY, sns);
-        for(var ri=0;ri<axY.length;ri++){
-          for(var ci=0;ci<axX.length;ci++){
-            var sx=axX[ci], sy=axY[ri];
-            /* 셀 범위 초과 체크 — 양쪽 메인과 최소 scg/sns 간격 보장 */
-            if(sx < cellX-tol || sx+subW > cellX+pX-scg+tol)continue;
-            if(sy < cellY-tol || sy+subH > cellY+pY-sns+tol)continue;
-            if(occCheck(sx,sy,subW,subH))continue;
-            var sm=trySpan(sx,sy,sc3,sr3);
-            if(sm){
-              sm.forEach(function(m){occL.push(_toLoc(m));res.push(m);});
-            }
-          }
-        }
-      }
+    /* BFS: 메인 스팬의 4방향 인접 위치를 초기 씨앗으로
+       씨앗 = 배치 후보 스팬의 좌상단 좌표
+       간격: 좌우=scg, 상하=sns */
+    var visited={};
+    var queue=[];
+
+    function _key(x,y){return Math.round(x*1000)+','+Math.round(y*1000);}
+
+    /* 기준 스팬(x,y,w,h)에서 4방향 서브 스팬 씨앗 좌표 생성 */
+    function _addSeeds(x,y,w,h){
+      [
+        [x+w+scg,   y        ],  /* 우: 기준스팬 우끝 + scg */
+        [x-subW-scg, y        ],  /* 좌: 기준스팬 좌시작 - 서브폭 - scg */
+        [x,          y+h+sns  ],  /* 하: 기준스팬 하끝 + sns */
+        [x,          y-subH-sns]  /* 상: 기준스팬 상시작 - 서브높이 - sns */
+      ].forEach(function(p){
+        var k=_key(p[0],p[1]);
+        if(!visited[k]){visited[k]=true;queue.push({x:p[0],y:p[1]});}
+      });
+    }
+
+    /* 메인 스팬들로 초기 씨앗 */
+    var allSpans=[];
+    for(var mr2=0;mr2<nRows;mr2++)
+      for(var mc2=0;mc2<nCols;mc2++)
+        if(mainGrid[mr2+','+mc2])
+          allSpans.push({x:bb.x0+mc2*pX, y:bb.y0+mr2*pY, w:sW, h:sH});
+
+    allSpans.forEach(function(s){_addSeeds(s.x,s.y,s.w,s.h);});
+
+    /* BFS 실행 */
+    var qi=0;
+    while(qi<queue.length){
+      var cur=queue[qi++];
+      var sx=cur.x, sy=cur.y;
+      if(occCheck(sx,sy,subW,subH))continue;
+      var sm=trySpan(sx,sy,sc3,sr3);
+      if(!sm)continue;
+      sm.forEach(function(m){occL.push(_toLoc(m));res.push(m);});
+      _addSeeds(sx,sy,subW,subH);
     }
   }
   function ew(){
@@ -1411,6 +1423,39 @@ function calcMods(){
   }
   if(iType==='rf')flat();else if(iType==='rg')ginseng();else if(iType==='fs')span();else if(iType==='fe')ew();
   else if(iType==='fd')dualAxis();
+
+  /* 단축식 열당 최소 장수 필터 */
+  if(iType==='fe'&&res.length){
+    var feAxisF=window._feAxis||'ew';
+    var aF=d2r(-rotA);
+    var minRowEW=parseInt((document.getElementById('e-ew-minrow')||{}).value)||0;
+    var minRowNS=parseInt((document.getElementById('e-ns-minrow')||{}).value)||0;
+    var minRow=feAxisF==='ew'?minRowEW:minRowNS;
+    if(minRow>0){
+      /* 로컬좌표로 변환 후 열 기준 그룹화 */
+      function modCtrLocal(m){
+        var sx=0,sy=0;m.forEach(function(p){sx+=p[0];sy+=p[1];});
+        var q=rp(sx/m.length,sy/m.length,-aF);return{x:q[0],y:q[1]};
+      }
+      var ewPostF=parseFloat((document.getElementById('e-ew-post')||{}).value||6500)/1000;
+      var nsPostF=parseFloat((document.getElementById('e-ns-post')||{}).value||4500)/1000;
+      var postPitch=feAxisF==='ew'?ewPostF:nsPostF;
+      /* 열 키: 포스트 방향 좌표를 포스트 간격으로 나눠 반올림 */
+      var colGroups={};
+      res.forEach(function(m,i){
+        var c=modCtrLocal(m);
+        var key=feAxisF==='ew'?Math.round(c.x/postPitch):Math.round(c.y/postPitch);
+        if(!colGroups[key])colGroups[key]=[];
+        colGroups[key].push(i);
+      });
+      /* 최소 장수 이상인 열만 유지 */
+      var keepSet={};
+      Object.keys(colGroups).forEach(function(k){
+        if(colGroups[k].length>=minRow)colGroups[k].forEach(function(i){keepSet[i]=true;});
+      });
+      res=res.filter(function(_,i){return keepSet[i];});
+    }
+  }
   function dualAxis(){
     var dsc2=gi('dsc'),dsr2=gi('dsr'),pd=Math.max(gv('dpd')/1000,5);
     var sW=dsc2*(mw+mg)-mg,sH=dsr2*(mh+mg)-mg;
@@ -1579,11 +1624,11 @@ function _rebuildFromPosts(){
 function drawMods(){
   _clearDualCircles();
   modPoly.forEach(function(p){map.removeLayer(p);}); modPoly=[];
-  var subStart=window._subSpanStart!=null?window._subSpanStart:mods.length;
+  var _subChk=(document.getElementById('sub-span-on')||{}).checked;
+  var subStart=(_subChk&&window._subSpanStart!=null)?window._subSpanStart:mods.length;
   mods.forEach(function(m,idx){
     var co=m.map(function(xy){var ll=xy2ll(xy[0],xy[1]);return[ll[0],ll[1]];});
-    /* 서브 스팬: 파란색 / 메인: 기존 녹색 */
-    var isSub=idx>=subStart;
+    var isSub=_subChk&&idx>=subStart;
     var pg=L.polygon(co,{
       color: isSub?'#1a6bcc':'#ff7700',
       fillColor: isSub?'#58a6ff':'#3fb950',
@@ -1699,62 +1744,75 @@ window.runExpandLayout=function(){
     return false;
   }
 
-  /* 빈 공간에 메인 스팬 추가 */
-  var nRows2=Math.ceil((bb.y1-bb.y0)/pY)+3;
-  var nCols2=Math.ceil((bb.x1-bb.x0)/pX)+3;
-  var mainGrid2={};
+  /* 빈 공간에 메인 스팬 추가:
+     행의 기존 메인 X를 앵커로 삼아 왼쪽/오른쪽으로 pX 피치로 탐색
+     → 이동된 메인과 정확히 같은 피치 정렬 보장 */
+  var rowYSet2={},rowYVals2=[];
   finalPos.forEach(function(p){
-    var ri=Math.round((p.y-bb.y0)/pY),ci=Math.round((p.x-bb.x0)/pX);
-    mainGrid2[ri+','+ci]=true;
+    var ky=Math.round(p.y*100);
+    if(!rowYSet2[ky]){rowYSet2[ky]=true;rowYVals2.push(p.y);}
   });
-  for(var r=0;r<nRows2;r++)
-    for(var c=0;c<nCols2;c++){
-      if(mainGrid2[r+','+c])continue;
-      var lx=bb.x0+c*pX,ly=bb.y0+r*pY;
-      if(occExp(lx,ly))continue;
-      var sm=trySpanAt(lx,ly);
-      if(sm){
-        finalPos.push({x:lx,y:ly});
-        mainGrid2[r+','+c]=true;
-        sm.forEach(function(m){newMods.push(m);});
+  var nSpread=Math.ceil((bb.x1-bb.x0)/pX)+4;
+  rowYVals2.forEach(function(rowY){
+    /* 이 행의 기존 메인 X 수집 */
+    var rowXSet2={};
+    var anchorX=null;
+    finalPos.forEach(function(p){
+      if(Math.abs(p.y-rowY)<pY*0.1){
+        rowXSet2[Math.round(p.x*100)]=true;
+        if(anchorX===null||p.x<anchorX)anchorX=p.x;
       }
+    });
+    if(anchorX===null)return;
+    /* 앵커에서 왼쪽/오른쪽으로 pX씩 탐색 */
+    for(var ci2=-nSpread;ci2<=nSpread;ci2++){
+      var lx=anchorX+ci2*pX;
+      if(lx<bb.x0-pX||lx>bb.x1+pX)continue;
+      if(rowXSet2[Math.round(lx*100)])continue;
+      if(occExp(lx,rowY))continue;
+      var sm=trySpanAt(lx,rowY);
+      if(sm){finalPos.push({x:lx,y:rowY});rowXSet2[Math.round(lx*100)]=true;sm.forEach(function(m){newMods.push(m);});}
     }
+  });
 
   /* 메인 스팬 적용 */
   mods=newMods;
   window._subSpanStart=newMods.length; /* 서브 스팬 시작 인덱스 */
 
-  /* 서브 스팬 ON이면 재배치
-     핵심: finalPos(실제 이동된 메인 위치) 기준으로
-           각 메인 스팬의 상하좌우 빈 공간을 셀로 잡아 서브 배치
-           셀 = 메인 스팬 끝 + scg/sns 간격부터 시작 */
+  /* 서브 스팬 ON이면: 확장된 메인 기준으로 calcMods 서브스팬 BFS와 동일한 로직 재실행 */
   var subOn=document.getElementById('sub-span-on');
   if(subOn&&subOn.checked){
     var sc3=parseInt((document.getElementById('sc2')||{}).value)||3;
     var sr3=parseInt((document.getElementById('sr2')||{}).value)||2;
-    var subW=sc3*(mw+mg)-mg,subH=sr3*(mh+mg)-mg;
-    var spX=subW+scg,spY=subH+sns;
+    var subW=sc3*(mw+mg)-mg, subH=sr3*(mh+mg)-mg;
+    var spX2=subW+scg, spY2=subH+sns;
 
-    function toLoc2(m){
+    /* 로컬 좌표 변환 */
+    function _toLocE(m){
       var xs=[],ys=[];
       m.forEach(function(p){var q=rp(p[0],p[1],-a2);xs.push(q[0]);ys.push(q[1]);});
       return{x0:Math.min.apply(null,xs),x1:Math.max.apply(null,xs),
              y0:Math.min.apply(null,ys),y1:Math.max.apply(null,ys)};
     }
-    var occL2=mods.map(toLoc2);
+    var occLE=mods.map(_toLocE); /* 현재 메인 모듈 전체 */
 
-    function occCheck2(lx,ly,lw,lh){
-      var lx1=lx+lw,ly1=ly+lh;
-      for(var k=0;k<occL2.length;k++){
-        var b=occL2[k];
-        var gx=Math.max(lx-b.x1,b.x0-lx1,0);
-        var gy=Math.max(ly-b.y1,b.y0-ly1,0);
-        if(gx<scg-tol&&gy<sns-tol)return true;
+    /* calcMods 와 동일한 겹침 체크 */
+    function occCheckE(lx,ly,lw,lh){
+      var lx1=lx+lw, ly1=ly+lh;
+      for(var k=0;k<occLE.length;k++){
+        var b=occLE[k];
+        var gx=Math.max(lx-b.x1, b.x0-lx1, 0);
+        var gy=Math.max(ly-b.y1, b.y0-ly1, 0);
+        if(gx<tol && gy<tol) return true;
+        if(gy<tol && gx<scg-tol) return true;
+        if(gx<tol && gy<sns-tol) return true;
+        if(gx>tol && gy>tol && gx<scg-tol && gy<sns-tol) return true;
       }
       return false;
     }
 
-    function trySubAt(lx,ly){
+    /* 서브스팬 배치 시도 */
+    function trySubE(lx,ly){
       var sm=[];
       for(var rr=0;rr<sr3;rr++)
         for(var cc=0;cc<sc3;cc++){
@@ -1765,71 +1823,52 @@ window.runExpandLayout=function(){
       return sm;
     }
 
-    function _cands2(cS,cE,subSz,pitch,gap){
-      var out=[],seen={},maxN=Math.ceil((cE-cS)/pitch)+2;
-      for(var i=0;i<maxN;i++){
-        var v1=cS+i*pitch,v2=cE-subSz-gap-i*pitch;
-        [v1,v2].forEach(function(v){
-          var key=Math.round(v*10000);
-          if(!seen[key]){seen[key]=true;out.push(v);}
-        });
-      }
-      out.sort(function(a,b){return a-b;});
-      return out;
+    /* ── 서브스팬 배치: 확장배치와 같은 방향으로
+       각 메인 스팬의 x1+scg 에서 시작, 서브피치로 오른쪽으로 연속 배치
+       Y는 메인 행 y0 고정 (메인과 동일 행 정렬)
+       메인 왼쪽(x0-subW-scg)도 같은 방식으로 왼쪽 연속 배치 */
+
+    /* 메인 스팬 AABB 수집 */
+    var mainAABBsE=[];
+    for(var mi=0;mi<newMods.length;mi+=spanSize){
+      var grp=newMods.slice(mi,mi+spanSize);
+      if(grp.length<spanSize)continue;
+      var ax0=Infinity,ay0=Infinity,ax1=-Infinity,ay1=-Infinity;
+      grp.forEach(function(mod){
+        var l=_toLocE(mod);
+        ax0=Math.min(ax0,l.x0);ay0=Math.min(ay0,l.y0);
+        ax1=Math.max(ax1,l.x1);ay1=Math.max(ay1,l.y1);
+      });
+      mainAABBsE.push({x0:ax0,y0:ay0,x1:ax1,y1:ay1});
     }
 
-    /* 각 메인 스팬(finalPos) 기준으로 서브 후보 위치 생성
-       후보 X = 메인.x + sW + scg + cc*spX  (메인 오른쪽)
-              = 메인.x - subW - scg - cc*spX (메인 왼쪽)
-       후보 Y = 메인.y + sH + sns + rr*spY  (메인 아래)
-              = 메인.y - subH - sns - rr*spY (메인 위)
-       → 메인과 정확히 scg/sns 간격부터 시작
-       occCheck2로 기존 모두와 간격 체크 후 배치 */
-    var maxTiles=Math.ceil(Math.max(bb.x1-bb.x0,bb.y1-bb.y0)/Math.min(spX,spY))+2;
-    var subCandSet={};
-    finalPos.forEach(function(p){
-      /* 오른쪽 방향 X 후보 */
-      for(var cc=0;cc<maxTiles;cc++){
-        var cx=p.x+sW+scg+cc*spX;
-        if(cx>bb.x1+spX)break;
-        /* 모든 Y: 메인 Y에서 위아래로 */
-        for(var rr=-(maxTiles);rr<=maxTiles;rr++){
-          var cy=p.y+rr*spY;
-          var k=Math.round(cx*1000)+'|'+Math.round(cy*1000);
-          if(!subCandSet[k])subCandSet[k]={x:cx,y:cy};
-        }
-      }
-      /* 왼쪽 방향 X 후보 */
-      for(var cc=0;cc<maxTiles;cc++){
-        var cx=p.x-subW-scg-cc*spX;
-        if(cx<bb.x0-spX)break;
-        for(var rr=-(maxTiles);rr<=maxTiles;rr++){
-          var cy=p.y+rr*spY;
-          var k=Math.round(cx*1000)+'|'+Math.round(cy*1000);
-          if(!subCandSet[k])subCandSet[k]={x:cx,y:cy};
-        }
-      }
-      /* 같은 X, 아래 Y */
-      for(var rr=1;rr<maxTiles;rr++){
-        var cy=p.y+sH+sns+(rr-1)*spY;
-        if(cy>bb.y1+spY)break;
-        var k=Math.round(p.x*1000)+'|'+Math.round(cy*1000);
-        if(!subCandSet[k])subCandSet[k]={x:p.x,y:cy};
-      }
-      /* 같은 X, 위 Y */
-      for(var rr=1;rr<maxTiles;rr++){
-        var cy=p.y-subH-sns-(rr-1)*spY;
-        if(cy<bb.y0-spY)break;
-        var k=Math.round(p.x*1000)+'|'+Math.round(cy*1000);
-        if(!subCandSet[k])subCandSet[k]={x:p.x,y:cy};
-      }
-    });
+    var triedE={};
+    function _tryPlace(sx,sy){
+      var tk=Math.round(sx*1000)+','+Math.round(sy*1000);
+      if(triedE[tk])return false;
+      triedE[tk]=true;
+      if(occCheckE(sx,sy,subW,subH))return false;
+      var sm=trySubE(sx,sy);
+      if(!sm)return false;
+      sm.forEach(function(m){occLE.push(_toLocE(m));mods.push(m);});
+      return true;
+    }
 
-    Object.keys(subCandSet).forEach(function(k){
-      var c=subCandSet[k];
-      if(occCheck2(c.x,c.y,subW,subH))return;
-      var sm=trySubAt(c.x,c.y);
-      if(sm){sm.forEach(function(m){occL2.push(toLoc2(m));mods.push(m);});}
+    var maxSpread=Math.ceil((bb.x1-bb.x0)/spX2)+4;
+
+    mainAABBsE.forEach(function(ab){
+      /* 오른쪽으로 연속 배치 */
+      for(var ci=0;ci<maxSpread;ci++){
+        var sx=ab.x1+scg+ci*spX2;
+        if(sx>bb.x1+spX2)break;
+        _tryPlace(sx,ab.y0);
+      }
+      /* 왼쪽으로 연속 배치 */
+      for(var ci=0;ci<maxSpread;ci++){
+        var sx=ab.x0-subW-scg-ci*spX2;
+        if(sx<bb.x0-spX2)break;
+        _tryPlace(sx,ab.y0);
+      }
     });
   }
 
@@ -1838,8 +1877,9 @@ window.runExpandLayout=function(){
 };
 
 function calcAndDraw(){
-  if(!_typeSelected)return; /* 설치 유형 미선택 시 배치 안 함 */
-  window._subSpanStart=null; /* 서브 스팬 인덱스 리셋 */
+  if(!_typeSelected)return;
+  if(modsSnapshot){drawMods();return;}
+  window._subSpanStart=null;
   mods=calcMods();deletedStack=[];
   var expOn=document.getElementById('expand-on');
   if(expOn&&expOn.checked&&iType==='fs'){
@@ -1851,6 +1891,8 @@ function calcAndDraw(){
 var _tryLTimer=null;
 window.tryL=function(){
   if(!pts.length||!_typeSelected)return;
+  if(curMode==='move')return;
+  if(modsSnapshot){drawMods();return;}
   /* 포스트 간격이 범위 벗어나면 재계산 안 함 */
   var ewEl=document.getElementById('e-ew-post');
   var nsEl=document.getElementById('e-ns-post');
@@ -1884,33 +1926,33 @@ function redrawPoly(){
   if(!pts.length)return;
   pts.forEach(function(p,i){var m=L.circleMarker(p,{radius:i===0?9:6,color:i===0?'#f7c948':'#58a6ff',fillColor:i===0?'#f7c948':'#58a6ff',fillOpacity:1,weight:2,interactive:false}).addTo(map);markers.push(m);});
   if(pts.length>=2)polyLayer=L.polygon(pts,{color:'#8B2FC9',fillColor:'#8B2FC9',fillOpacity:.1,weight:2.5,dashArray:'7,4',interactive:false}).addTo(map);
-  /* 경계 이격 시각화: borderOff>0 이면 내부에 얇은 점선 표시 */
+  /* 경계 이격 시각화: borderOff>0 이면 내부에 점선 폴리곤 표시 */
   var borderOff=(gv('mborder')||0)/1000;
   if(borderOff>0&&pts.length>=3){
     setCtr(pts);
     var lp=pts.map(function(p){return ll2xy(p[0],p[1]);});
-    /* 각 변에서 borderOff만큼 안쪽으로 평행 이동한 선분들을 그림 */
     var n=lp.length;
-    var innerLines=[];
+    var innerPts=[];
+    /* 각 꼭짓점을 인접한 두 변의 내부 방향으로 이동 */
+    var cx_=lp.reduce(function(s,p){return s+p[0];},0)/n;
+    var cy_=lp.reduce(function(s,p){return s+p[1];},0)/n;
     for(var i=0;i<n;i++){
-      var j=(i+1)%n;
-      var ax=lp[i][0],ay=lp[i][1],bx=lp[j][0],by=lp[j][1];
-      var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy);
-      if(len<1e-10)continue;
-      /* 내부 방향 법선 (폴리곤 무게중심 기준) */
-      var cx_=(lp.reduce(function(s,p){return s+p[0];},0)/n);
-      var cy_=(lp.reduce(function(s,p){return s+p[1];},0)/n);
-      var nx=-dy/len,ny=dx/len;
-      /* 무게중심 방향으로 법선 보정 */
-      var mx=(ax+bx)/2,my=(ay+by)/2;
-      if((cx_-mx)*nx+(cy_-my)*ny<0){nx=-nx;ny=-ny;}
-      var ia=xy2ll(ax+nx*borderOff,ay+ny*borderOff);
-      var ib=xy2ll(bx+nx*borderOff,by+ny*borderOff);
-      innerLines.push([ia,ib]);
+      var prev=lp[(i-1+n)%n],cur2=lp[i],next=lp[(i+1)%n];
+      /* 이전 변 법선 */
+      var dx1=cur2[0]-prev[0],dy1=cur2[1]-prev[1],len1=Math.sqrt(dx1*dx1+dy1*dy1);
+      var nx1=-dy1/len1,ny1=dx1/len1;
+      if((cx_-cur2[0])*nx1+(cy_-cur2[1])*ny1<0){nx1=-nx1;ny1=-ny1;}
+      /* 다음 변 법선 */
+      var dx2=next[0]-cur2[0],dy2=next[1]-cur2[1],len2=Math.sqrt(dx2*dx2+dy2*dy2);
+      var nx2=-dy2/len2,ny2=dx2/len2;
+      if((cx_-cur2[0])*nx2+(cy_-cur2[1])*ny2<0){nx2=-nx2;ny2=-ny2;}
+      /* 두 법선 평균으로 꼭짓점 이동 */
+      var anx=(nx1+nx2)/2,any=(ny1+ny2)/2;
+      var alen=Math.sqrt(anx*anx+any*any)||1;
+      anx/=alen;any/=alen;
+      innerPts.push(xy2ll(cur2[0]+anx*borderOff,cur2[1]+any*borderOff));
     }
-    var allSegs=innerLines.map(function(seg){return L.polyline(seg,{color:'#2196f3',weight:2,dashArray:'6,4',interactive:false});});
-    /* 레이어 그룹으로 합침 */
-    borderOffsetLayer=L.layerGroup(allSegs).addTo(map);
+    borderOffsetLayer=L.polygon(innerPts,{color:'#2196f3',fillColor:'transparent',fillOpacity:0,weight:1.5,dashArray:'6,4',interactive:false}).addTo(map);
   }
 }
 
@@ -2079,13 +2121,13 @@ window.clipToBoundary=function(){
       }
       groups.push(group);
     }
-    /* 완전한 스팬(spanSize 이상)만 유지 */
+    /* 완전한 스팬(메인 or 서브 크기 이상)만 유지 */
+    var sc3cl=parseInt((document.getElementById('sc2')||{}).value)||3;
+    var sr3cl=parseInt((document.getElementById('sr2')||{}).value)||2;
+    var minSpan=Math.min(spanSize, sc3cl*sr3cl);
     var keep=[];
     groups.forEach(function(g){
-      if(g.length>=spanSize){
-        g.forEach(function(gi){keep.push(okMods[gi]);});
-      }
-      /* 미달 그룹은 버림 (무너진 스팬) */
+      if(g.length>=minSpan){g.forEach(function(gi){keep.push(okMods[gi]);});}
     });
     mods=keep;
   } else {
@@ -2105,10 +2147,11 @@ var _typeDefaults={
   rf:{orient:'v'},
   rg:{orient:'v',gpr:2,gns:3500},
   fs:{orient:'v',sc:6,sr:2,scg:500,sns:3500},
-  fe:{orient:'h','e-ew-post':6500,'e-ew-count':1,'e-ns-post':4500,'e-ns-count':1},
+  fe:{orient:'h','e-ew-post':6500,'e-ew-count':1,'e-ns-post':4500,'e-ns-count':1,'e-ew-minrow':0,'e-ns-minrow':0},
   fd:{orient:'h',dsc:5,dsr:6,dpd:15000}
 };
 window.setType=function(t,el){
+  _resetSnapshot();
   iType=t;
   _typeSelected=true;
   document.querySelectorAll('.rb').forEach(function(b){b.classList.remove('on');});
@@ -2127,6 +2170,18 @@ window.setType=function(t,el){
       if(el2&&el2.value!=def[k]+'')el2.value=def[k];
     }
   });
+  /* fe 유형 선택 시 동서축 기본값으로 초기화 */
+  if(t==='fe'){
+    window._feAxis='ew';
+    var axEW=document.getElementById('fe-axis-ew');if(axEW)axEW.classList.add('on');
+    var axNS=document.getElementById('fe-axis-ns');if(axNS)axNS.classList.remove('on');
+    var optEW=document.getElementById('fe-opt-ew');if(optEW)optEW.style.display='';
+    var optNS=document.getElementById('fe-opt-ns');if(optNS)optNS.style.display='none';
+    rotA=0;
+    var rsl=document.getElementById('rsl');if(rsl)rsl.value=0;
+    var rv=document.getElementById('rv');if(rv)rv.textContent='0°';
+    try{_syncCompass(false);}catch(e){}
+  }
   /* 유형 변경 시 현재 경사각/방위각 기준으로 발전량 즉시 재계산 */
   try{_onTiltChange();}catch(e){}
   /* 남북이격 힌트 갱신 */
@@ -2272,6 +2327,24 @@ document.addEventListener('change',function(e){
   if(e.target&&e.target.id==='sub-span-on'){
     var opts=document.getElementById('sub-span-opts');
     if(opts){opts.style.opacity=e.target.checked?'1':'0.4';opts.style.pointerEvents=e.target.checked?'':'none';}
+    if(iType==='fs'&&(curMode==='move'||modsSnapshot)){
+      var subStart=window._subSpanStart!=null?window._subSpanStart:mods.length;
+      mods=mods.slice(0,subStart);
+      var expOn=document.getElementById('expand-on');
+      if(expOn&&expOn.checked){runExpandLayout();}else{drawMods();}
+      return;
+    }
+    tryL();
+  }
+  if(e.target&&e.target.id==='expand-on'){
+    if(iType==='fs'&&(curMode==='move'||modsSnapshot)){
+      var subStart2=window._subSpanStart!=null?window._subSpanStart:mods.length;
+      mods=mods.slice(0,subStart2);
+      window._subSpanStart=mods.length;
+      var expOn2=document.getElementById('expand-on');
+      if(expOn2&&expOn2.checked){runExpandLayout();}else{drawMods();}
+      return;
+    }
     tryL();
   }
 });
@@ -2348,6 +2421,12 @@ window.setFeAxis=function(axis){
   document.getElementById('fe-axis-ns').classList.toggle('on',axis==='ns');
   document.getElementById('fe-opt-ew').style.display=axis==='ew'?'':'none';
   document.getElementById('fe-opt-ns').style.display=axis==='ns'?'':'none';
+  /* 동서축: 배치각 0° / 남북축: 배치각 90° — rotA만 변경하고 슬라이더 동기화 */
+  var newRot=axis==='ew'?0:90;
+  rotA=newRot;
+  var rsl=document.getElementById('rsl');if(rsl)rsl.value=newRot;
+  var rv=document.getElementById('rv');if(rv)rv.textContent=newRot+'°';
+  try{_syncCompass(false);}catch(e){}
   _calcNsGapHint();
   tryL();
 };
@@ -2463,9 +2542,9 @@ var _calcNsGapHintImmediate=function(){
       box.style.display='block';
       box.innerHTML=
         '<div class="gap-title">🔧 동서축 추적 이격 (추적각 ±45°)</div>'
-        +'<div class="gap-row"><div><div class="gap-label">동서 최소 (27°)</div><div class="gap-sub">포스트간 '+postMin_ew.toLocaleString('ko-KR')+'mm</div></div><div class="gap-val warn">'+gapMin_ew.toLocaleString('ko-KR')+' mm</div></div>'
-        +'<div class="gap-row"><div><div class="gap-label">동서 권장 (23°)</div><div class="gap-sub">포스트간 '+postRec_ew.toLocaleString('ko-KR')+'mm</div></div><div class="gap-val ok">'+gapRec_ew.toLocaleString('ko-KR')+' mm</div></div>'
-        +'<div class="gap-row" style="background:rgba(255,255,255,.03);border-radius:5px;padding:5px 6px;margin-top:4px"><div><div class="gap-label" style="color:var(--text2);font-weight:600">현재 포스트간 (EW)</div><div class="gap-sub">이격 '+gapCur_ew.toLocaleString('ko-KR')+'mm</div></div><div style="text-align:right"><div class="gap-val '+sEW+'">'+ewPost.toLocaleString('ko-KR')+' mm</div><div class="gap-sub" style="font-weight:700;color:'+(sEW==='ok'?'var(--green)':sEW==='warn'?'var(--accent)':'#f85149')+'">'+sTxtEW+'</div></div></div>'
+        +'<div class="gap-row"><div><div class="gap-label">동서 최소 포스트간 (27°)</div></div><div class="gap-val warn">'+postMin_ew.toLocaleString('ko-KR')+' mm</div></div>'
+        +'<div class="gap-row"><div><div class="gap-label">동서 권장 포스트간 (23°)</div></div><div class="gap-val ok">'+postRec_ew.toLocaleString('ko-KR')+' mm</div></div>'
+        +'<div class="gap-row" style="background:rgba(255,255,255,.03);border-radius:5px;padding:5px 6px;margin-top:4px"><div><div class="gap-label" style="color:var(--text2);font-weight:600">현재 포스트간 (EW)</div></div><div style="text-align:right"><div class="gap-val '+sEW+'">'+ewPost.toLocaleString('ko-KR')+' mm</div><div class="gap-sub" style="font-weight:700;color:'+(sEW==='ok'?'var(--green)':sEW==='warn'?'var(--accent)':'#f85149')+'">'+sTxtEW+'</div></div></div>'
         +'<div style="margin-top:6px;padding:5px 7px;background:rgba(88,166,255,.08);border-radius:4px;font-size:10px;color:var(--text2)">남북: 모듈('+mhV+'mm) mg 간격 연속 배치</div>';
     } else {
       var nsPost=parseFloat((document.getElementById('e-ns-post')||{}).value)||4500;
@@ -2481,9 +2560,9 @@ var _calcNsGapHintImmediate=function(){
       box2.style.display='block';
       box2.innerHTML=
         '<div class="gap-title">🔧 남북축 추적 이격 (경사 '+tilt+'°)</div>'
-        +'<div class="gap-row"><div><div class="gap-label">남북 최소 (27°)</div><div class="gap-sub">포스트간 '+postMin_ns.toLocaleString('ko-KR')+'mm</div></div><div class="gap-val warn">'+gapMin_ns.toLocaleString('ko-KR')+' mm</div></div>'
-        +'<div class="gap-row"><div><div class="gap-label">남북 권장 (23°)</div><div class="gap-sub">포스트간 '+postRec_ns.toLocaleString('ko-KR')+'mm</div></div><div class="gap-val ok">'+gapRec_ns.toLocaleString('ko-KR')+' mm</div></div>'
-        +'<div class="gap-row" style="background:rgba(255,255,255,.03);border-radius:5px;padding:5px 6px;margin-top:4px"><div><div class="gap-label" style="color:var(--text2);font-weight:600">현재 포스트간 (NS)</div><div class="gap-sub">이격 '+gapCur_ns.toLocaleString('ko-KR')+'mm</div></div><div style="text-align:right"><div class="gap-val '+sNS+'">'+nsPost.toLocaleString('ko-KR')+' mm</div><div class="gap-sub" style="font-weight:700;color:'+(sNS==='ok'?'var(--green)':sNS==='warn'?'var(--accent)':'#f85149')+'">'+sTxtNS+'</div></div></div>'
+        +'<div class="gap-row"><div><div class="gap-label">남북 최소 포스트간 (27°)</div></div><div class="gap-val warn">'+postMin_ns.toLocaleString('ko-KR')+' mm</div></div>'
+        +'<div class="gap-row"><div><div class="gap-label">남북 권장 포스트간 (23°)</div></div><div class="gap-val ok">'+postRec_ns.toLocaleString('ko-KR')+' mm</div></div>'
+        +'<div class="gap-row" style="background:rgba(255,255,255,.03);border-radius:5px;padding:5px 6px;margin-top:4px"><div><div class="gap-label" style="color:var(--text2);font-weight:600">현재 포스트간 (NS)</div></div><div style="text-align:right"><div class="gap-val '+sNS+'">'+nsPost.toLocaleString('ko-KR')+' mm</div><div class="gap-sub" style="font-weight:700;color:'+(sNS==='ok'?'var(--green)':sNS==='warn'?'var(--accent)':'#f85149')+'">'+sTxtNS+'</div></div></div>'
         +'<div style="margin-top:6px;padding:5px 7px;background:rgba(88,166,255,.08);border-radius:4px;font-size:10px;color:var(--text2)">동서: 모듈('+mwV+'mm) mg 간격 연속 배치</div>';
     }
     document.querySelectorAll('.ns-gap-hint-box:not(#ns-gap-hint-fe)').forEach(function(b){b.style.display='none';});
@@ -2878,7 +2957,7 @@ window.confirmZone=function(){
   if(snameEl)snameEl._editZoneName=null; /* 사용 후 초기화 */
   var savedDualCircles=_dualCircles.slice();_dualCircles=[];
   zones.push({pts:savedPts,mods:savedMods,modPoly:savedModPoly,polyLayer:zPoly,iType:iType,orient:orient,rotA:rotA,tilt:savedTilt,mp:p,cnt:mods.length,kw:(mods.length*p/1000).toFixed(2),area:polyArea(pts),borderOff:savedBorderOff,name:_defaultName,dualCircles:savedDualCircles});
-  pts=[];mods=[];modPoly=[];deletedStack=[];
+  pts=[];mods=[];modPoly=[];deletedStack=[];modsSnapshot=null;
   if(polyLayer){map.removeLayer(polyLayer);polyLayer=null;}
   rotA=0;document.getElementById('rsl').value=0;document.getElementById('rv').textContent='0°';
   /* 다음 부지를 위해 유형 선택 초기화 */
@@ -3780,18 +3859,26 @@ function deleteSpan(clickedIdx){
     _deleteByIndices(toDelete,'스판('+toDelete.length+'장) 삭제');
 
   } else if(iType==='fe'){
-    /* 단축식: 포스트간격 기준으로 같은 열 선택 */
+    /* 단축식: 로컬 좌표(회전 보정) 기준으로 같은 포스트 열 선택 */
     var feAxis=window._feAxis||'ew';
     var ewPost=parseFloat((document.getElementById('e-ew-post')||{}).value||6500)/1000;
     var nsPost=parseFloat((document.getElementById('e-ns-post')||{}).value||4500)/1000;
-    var tc=modCenter(mods[clickedIdx]);
+    var aFe=d2r(-rotA);
+    function modCenterLocal(m){
+      var sx=0,sy=0;m.forEach(function(p){sx+=p[0];sy+=p[1];});
+      var gx=sx/m.length,gy=sy/m.length;
+      return rp(gx,gy,-aFe); /* 로컬 좌표 */
+    }
+    var tcL=modCenterLocal(mods[clickedIdx]);
     var toDeleteFe=[];
     mods.forEach(function(m,i){
-      var c=modCenter(m);
+      var cL=modCenterLocal(m);
       if(feAxis==='ew'){
-        if(Math.abs(c[0]-tc[0])<ewPost*0.45)toDeleteFe.push(i);
+        /* 동서축: 같은 X(동서) 포스트 열 */
+        if(Math.abs(cL[0]-tcL[0])<ewPost*0.45)toDeleteFe.push(i);
       } else {
-        if(Math.abs(c[1]-tc[1])<nsPost*0.45)toDeleteFe.push(i);
+        /* 남북축: 같은 Y(남북) 포스트 열 */
+        if(Math.abs(cL[1]-tcL[1])<nsPost*0.45)toDeleteFe.push(i);
       }
     });
     _deleteByIndices(toDeleteFe,'추적기 열('+toDeleteFe.length+'장) 삭제');
@@ -3831,20 +3918,32 @@ function _deleteByIndices(indices,label){
 window.autoOptimizeAngle=function(){
   if(!pts.length||!_typeSelected){setSt('먼저 부지를 그려주세요','r');return;}
   var btn=document.getElementById('btn-auto-opt');
+  var btnTb=document.getElementById('btn-auto-opt-tb');
   var result=document.getElementById('auto-opt-result');
   if(btn){btn.textContent='⏳ 탐색 중...';btn.disabled=true;}
+  if(btnTb){btnTb.textContent='⏳...';btnTb.disabled=true;}
   if(result)result.style.display='none';
 
   setTimeout(function(){
     var tilt=parseFloat((document.getElementById('mod-tilt')||{}).value)||15;
     var hasPvgis=(_pvgisGhiRaw&&_pvgisGhiRaw.length&&_pvgisLat!==null);
     var modKw=parseFloat((document.getElementById('mp')||{}).value||655)/1000;
+    var expOn=document.getElementById('expand-on');
+    var isExpand=expOn&&expOn.checked&&iType==='fs';
 
-    /* ── 모든 유형: 회전 각도 탐색 (사용자 간격 설정 변경 없음) ── */
-    /* 단축/양축도 회전각에 따라 배치 수량이 달라지므로 동일하게 각도 탐색 */
+    /* 확장배치+서브스팬 포함 총 모듈 수 계산 함수 */
+    function countMods(){
+      window._subSpanStart=null;
+      mods=calcMods();
+      if(isExpand){runExpandLayout();}
+      return mods.length;
+    }
+
     function southDist(a){var n=((a%180)+180)%180;return Math.min(n,180-n);}
     function score(ang,cnt){
       if(cnt===0)return -1;
+      /* 단축식/양축식: 추적식이므로 회전각과 발전량 무관 → 모듈 수만 최대화 */
+      if(iType==='fe'||iType==='fd') return cnt;
       if(hasPvgis){
         var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,ang);
         return cnt*poa;
@@ -3854,28 +3953,46 @@ window.autoOptimizeAngle=function(){
     }
 
     var best={ang:0,cnt:0,score:-1};
-    for(var ang=0;ang<180;ang+=5){
+    var coarseStep=isExpand?10:5;
+
+    /* 단축식 탐색 범위:
+       동서축(ew): 배치각 0°(동서) 기준 ±45° 범위 (0~45° 및 135~179°)
+       남북축(ns): 배치각 90°(남북) 기준 ±45° 범위 (45~135°)
+       → 범위 외 각도는 탐색 건너뜀 */
+    function _feAngAllowed(ang){
+      if(iType!=='fe')return true;
+      var feAxisOpt=window._feAxis||'ew';
+      var n=((ang%180)+180)%180;
+      if(feAxisOpt==='ew') return n<=45||n>=135;  /* 동서 방향 */
+      else                 return n>=45&&n<=135;  /* 남북 방향 */
+    }
+
+    for(var ang=0;ang<180;ang+=coarseStep){
+      if(!_feAngAllowed(ang))continue;
       rotA=ang;
-      var cnt=calcMods().length;
+      var cnt=countMods();
       var sc=score(ang,cnt);
       if(sc>best.score)best={ang:ang,cnt:cnt,score:sc};
     }
-    for(var a2=Math.max(0,best.ang-8);a2<=Math.min(179,best.ang+8);a2++){
+    var fineRange=isExpand?5:8;
+    var fineStep=isExpand?2:1;
+    for(var a2=Math.max(0,best.ang-fineRange);a2<=Math.min(179,best.ang+fineRange);a2+=fineStep){
+      if(!_feAngAllowed(a2))continue;
       rotA=a2;
-      var c2=calcMods().length;
+      var c2=countMods();
       var sc2=score(a2,c2);
       if(sc2>best.score)best={ang:a2,cnt:c2,score:sc2};
     }
 
     setRot(best.ang);
     if(btn){btn.textContent='✦ 최적 각도 자동 탐색';btn.disabled=false;}
+    if(btnTb){btnTb.textContent='✦ 자동배치';btnTb.disabled=false;}
     var sd=southDist(best.ang);
     var dir=sd<=5?'정남향':sd<=20?'남향권':sd<=45?'남동/남서향':'동/서향';
     var resText='✅ '+best.ang+'° ('+dir+') → '+best.cnt+'장';
     if(hasPvgis){
       var totalKwp=best.cnt*modKw;
       var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,best.ang);
-      /* 추적식 발전량 보정: 단축+11%, 양축+23% */
       var trackMult=iType==='fe'?1.11:iType==='fd'?1.23:1.0;
       var genKwh=Math.round(totalKwp*poa*0.78*trackMult);
       resText+=' / '+genKwh.toLocaleString()+' kWh/년';
@@ -3921,6 +4038,7 @@ window.expandPanel=function(){
 /* ── 모듈이동 서브패널 ── */
 var moveSubMode='', selMods={};
 var modsSnapshot=null, isMoveAllActive=false;
+function _resetSnapshot(){modsSnapshot=null;deletedStack=[];}
 var _ewCheckActive=false, _ewOrigRot=0;
 
 window.toggleMovePanel=function(){
@@ -3978,10 +4096,13 @@ window.setMoveSubMode=function(m){
   var be=document.getElementById('bmove-exp');if(be)be.classList.toggle('on',m==='exp');
   var ba=document.getElementById('bmove-all');if(ba)ba.classList.toggle('on',m==='all');
   var bs=document.getElementById('bmove-sel');if(bs)bs.classList.toggle('on',m==='sel');
+  var bsp=document.getElementById('bmove-span');if(bsp)bsp.classList.toggle('on',m==='span');
   var bsh=document.getElementById('move-sel-hint');if(bsh)bsh.style.display=m==='sel'?'inline':'none';
   var bok=document.getElementById('bmove-ok');if(bok)bok.style.display=m==='sel'?'inline-block':'none';
 
   if(m==='exp'){
+    /* 단축식(fe)에서는 확장 배치이동 사용 불가 */
+    if(iType==='fe'){setSt('⚠ 단축식에서는 확장 배치이동을 사용할 수 없습니다.','r');var be2=document.getElementById('bmove-exp');if(be2)be2.classList.remove('on');return;}
     /* 확장 배치이동: 경계 밖까지 3배 확장 그리드 → 드래그로 위치 조정 → OK로 경계 밖 정리 */
     _exitSelMode();
     if(curMode==='move'){ /* 이미 이동 중이면 현재 offset 기억 후 재확장 */ }
@@ -4054,25 +4175,134 @@ window.setMoveSubMode=function(m){
   } else if(m==='sel'){
     /* 개별 모듈 이동 */
     if(curMode==='move'){
-      /* 이동 모드에서 개별 선택으로 전환 시 현재 mods 정리 */
-      clipToBoundary();
-      isMoveAllActive=false;
-      curMode='pan';
-      map.dragging.enable();
-      document.getElementById('move-ok').style.display='none';
+      clipToBoundary();isMoveAllActive=false;curMode='pan';
+      map.dragging.enable();document.getElementById('move-ok').style.display='none';
     }
     _enterSelMode();
+  } else if(m==='span'){
+    /* 스판 이동 */
+    if(curMode==='move'){
+      clipToBoundary();isMoveAllActive=false;curMode='pan';
+      map.dragging.enable();document.getElementById('move-ok').style.display='none';
+    }
+    _enterSpanMoveMode();
   }
 };
 window.resetModsToSnapshot=function(){
-  if(!modsSnapshot){if(pts.length>=3){calcAndDraw();setSt('초기 배치로 재계산','g');}else setSt('리셋할 배치 없음','y');return;}
+  if(!modsSnapshot){
+    if(pts.length>=3){_resetSnapshot();calcAndDraw();setSt('초기 배치로 재계산','g');}
+    else setSt('리셋할 배치 없음','y');return;
+  }
   if(!confirm('이동 전 배치로 되돌리겠습니까?'))return;
+  _resetSnapshot();
   mods=JSON.parse(JSON.stringify(modsSnapshot));deletedStack=[];
   drawMods();
   /* 양축식이면 원도 복원 */
   if(iType==='fd')_refreshDualCirclesFromMods();
   setSt('리셋 완료','g');
 };
+
+/* ── 스판 이동 모드 ── */
+var _spanMoveHandlers=null; /* 드래그 핸들러 정리용 */
+
+function _enterSpanMoveMode(){
+  selMods={};
+  if(_spanMoveHandlers){_spanMoveHandlers();_spanMoveHandlers=null;}
+  /* 모듈 클릭 → 소속 스팬 BFS 감지 → 드래그 이동 */
+  modPoly.forEach(function(pg){
+    pg.off('click');
+    pg.on('click',function(e){
+      L.DomEvent.stopPropagation(e);
+      if(moveSubMode!=='span')return;
+      /* 이미 드래그 중이면 무시 */
+      if(_spanMoveHandlers)return;
+      var clickedIdx=pg._modIdx;
+      var spanIdxList=_getSpanIndices(clickedIdx);
+      if(!spanIdxList.length)return;
+      /* 하이라이트 */
+      selMods={};
+      spanIdxList.forEach(function(i){selMods[i]=true;});
+      modPoly.forEach(function(p){
+        p.setStyle(selMods[p._modIdx]
+          ?{color:'#f7c948',fillColor:'#f7c948',fillOpacity:.8,weight:3}
+          :{color:'#ff7700',fillColor:'#3fb950',fillOpacity:.55,weight:2});
+      });
+      setSt(spanIdxList.length+'장 스팬 선택. 드래그로 이동 후 ✓ 완료.','b');
+      /* 완료 버튼 동적 생성 */
+      var old=document.getElementById('span-done-btn');if(old)old.remove();
+      var doneBtn=document.createElement('button');doneBtn.id='span-done-btn';
+      doneBtn.style.cssText='position:absolute;bottom:44px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;border:none;padding:10px 30px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;z-index:1000;box-shadow:0 4px 18px rgba(0,0,0,.5)';
+      doneBtn.textContent='✓ 완료 — 경계 밖 정리';
+      document.getElementById('map').appendChild(doneBtn);
+      /* 드래그 */
+      var dragging=false,dragStart=null;
+      function md(ev){dragging=true;dragStart=ev.latlng;map.getContainer().style.cursor='grabbing';}
+      function mm(ev){
+        if(!dragging||!dragStart)return;
+        var dlat=ev.latlng.lat-dragStart.lat,dlng=ev.latlng.lng-dragStart.lng;
+        setCtr(pts);
+        spanIdxList.forEach(function(i){
+          if(!modPoly[i])return;
+          var co=mods[i].map(function(xy){var ll=xy2ll(xy[0],xy[1]);return[ll[0]+dlat,ll[1]+dlng];});
+          modPoly[i].setLatLngs(co);
+        });
+      }
+      function mu(ev){
+        if(!dragging)return;dragging=false;
+        map.getContainer().style.cursor='pointer';
+        var dlat=ev.latlng.lat-dragStart.lat,dlng=ev.latlng.lng-dragStart.lng;
+        setCtr(pts);
+        spanIdxList.forEach(function(i){
+          mods[i]=mods[i].map(function(xy){var ll=xy2ll(xy[0],xy[1]);return ll2xy(ll[0]+dlat,ll[1]+dlng);});
+        });
+        dragStart=ev.latlng;
+        spanIdxList.forEach(function(i){if(modPoly[i])modPoly[i].setStyle({color:'#f7c948',fillColor:'#f7c948',fillOpacity:.8,weight:3});});
+      }
+      map.on('mousedown',md);map.on('mousemove',mm);map.on('mouseup',mu);
+      map.dragging.disable();
+      /* 정리 함수 등록 */
+      _spanMoveHandlers=function(){
+        map.off('mousedown',md);map.off('mousemove',mm);map.off('mouseup',mu);
+        map.dragging.enable();
+        var d=document.getElementById('span-done-btn');if(d)d.remove();
+        _spanMoveHandlers=null;
+      };
+      doneBtn.onclick=function(){
+        if(_spanMoveHandlers){_spanMoveHandlers();}
+        clipToBoundary();
+        selMods={};
+        drawMods();
+        var bsp=document.getElementById('bmove-span');if(bsp)bsp.classList.remove('on');
+        moveSubMode='';
+        closeMovePanel();
+        setSt('스팬 이동 완료 (경계 밖 정리됨).','g');
+      };
+    });
+  });
+  map.getContainer().style.cursor='pointer';
+  setSt('이동할 스팬을 클릭하세요.','b');
+}
+
+/* BFS로 클릭 모듈의 소속 스팬 인덱스 목록 반환 */
+function _getSpanIndices(clickedIdx){
+  var dim=getModDim(),mw=dim.mw,mh=dim.mh,mg=dim.mg;
+  var thX=(mw+mg)*1.1,thY=(mh+mg)*1.1;
+  function modCenter(m){var sx=0,sy=0;m.forEach(function(p){sx+=p[0];sy+=p[1];});return[sx/m.length,sy/m.length];}
+  var centers=mods.map(modCenter);
+  var visited=new Array(mods.length).fill(false);
+  var queue=[clickedIdx];visited[clickedIdx]=true;
+  while(queue.length){
+    var cur=queue.shift();var cc=centers[cur];
+    for(var i=0;i<mods.length;i++){
+      if(visited[i])continue;
+      var ic=centers[i];
+      var dx=Math.abs(ic[0]-cc[0]),dy=Math.abs(ic[1]-cc[1]);
+      if((dx<thX&&dy<thY*0.5)||(dy<thY&&dx<thX*0.5)){visited[i]=true;queue.push(i);}
+    }
+  }
+  var res=[];visited.forEach(function(v,i){if(v)res.push(i);});
+  return res;
+}
 
 /* 개별 선택 모드 */
 function _enterSelMode(){
@@ -4119,7 +4349,7 @@ window.confirmSelMove=function(){
   function mm(e){if(!dragging||!dragStart)return;var dlat=e.latlng.lat-dragStart.lat,dlng=e.latlng.lng-dragStart.lng;setCtr(pts);idxList.forEach(function(idx){if(!modPoly[idx])return;var co=mods[idx].map(function(xy){var ll=xy2ll(xy[0],xy[1]);return[ll[0]+dlat,ll[1]+dlng];});modPoly[idx].setLatLngs(co);});}
   function mu(e){if(!dragging)return;dragging=false;map.getContainer().style.cursor='pointer';var dlat=e.latlng.lat-dragStart.lat,dlng=e.latlng.lng-dragStart.lng;setCtr(pts);idxList.forEach(function(idx){mods[idx]=mods[idx].map(function(xy){var ll=xy2ll(xy[0],xy[1]);return ll2xy(ll[0]+dlat,ll[1]+dlng);});});dragStart=e.latlng;idxList.forEach(function(idx){if(modPoly[idx])modPoly[idx].setStyle({color:'#f7c948',fillColor:'#f7c948',fillOpacity:.75,weight:3});});}
   map.on('mousedown',md);map.on('mousemove',mm);map.on('mouseup',mu);map.dragging.disable();
-  doneBtn.onclick=function(){map.off('mousedown',md);map.off('mousemove',mm);map.off('mouseup',mu);map.dragging.enable();var h=document.getElementById('sel-drag-hint');if(h)h.remove();var d=document.getElementById('sel-done-btn');if(d)d.remove();_exitSelMode();closeMovePanel();setSt('개별 모듈 이동 완료.','g');};
+  doneBtn.onclick=function(){map.off('mousedown',md);map.off('mousemove',mm);map.off('mouseup',mu);map.dragging.enable();var h=document.getElementById('sel-drag-hint');if(h)h.remove();var d=document.getElementById('sel-done-btn');if(d)d.remove();clipToBoundary();drawMods();_exitSelMode();closeMovePanel();setSt('개별 모듈 이동 완료.','g');};
 };
 
 /* ── 전체 배치이동 ── */
@@ -4179,7 +4409,8 @@ window.confirmMoveOK=function(){
   /* 확정된 배치를 스냅샷으로 저장 → 다음 확장배치이동 시 여기서 시작 */
   modsSnapshot=JSON.parse(JSON.stringify(mods));
   exitMoveMode();moveSubMode='';
-  ['bmove-exp','bmove-all','bmove-sel'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('on');});
+  ['bmove-exp','bmove-all','bmove-sel','bmove-span'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('on');});
+  if(_spanMoveHandlers){_spanMoveHandlers();}
   closeMovePanel();setMode('pan');
   setSt('✓ 이동 완료. 경계 밖 스팬 정리됨.','g');
 };
@@ -4728,6 +4959,33 @@ var _manualToolContent={
     <b style="color:#79c0ff">서브 스판 (체크박스)</b> — 메인 스판이 못 들어간 빈 자리를 작은 스판으로 자동 채움<br>
     <span style="padding-left:10px">• <b style="color:#f0f6fc">서브 가로/세로</b>: 서브 스판 배열 수 (메인보다 작게 설정)</span><br>
     <span style="color:#f7c948;padding-left:10px">💡 서브 스판은 메인 스판 실패 격자에만 배치되며, 메인과 절대 겹치지 않습니다</span>
+  </div>
+</div>
+
+<!-- 확장배치 + 서브스판 -->
+<div style="background:#1c2230;border:1px solid rgba(163,113,247,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(163,113,247,.12);padding:8px 14px;border-bottom:1px solid rgba(163,113,247,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#a371f7;color:#000;font-weight:900;font-size:13px;border-radius:4px;padding:2px 8px">고급</div>
+    <span style="font-size:13px;font-weight:700;color:#a371f7">확장 배치 + 서브 스판 동시 사용</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:13px;color:#dde4ed;line-height:2">
+    <b style="color:#a371f7">■ 확장 배치란?</b><br>
+    <span style="padding-left:10px">고정식 스판에서 메인 스판을 경계 한쪽 방향으로 최대한 밀어 넣어</span><br>
+    <span style="padding-left:10px">빈 공간을 확보하는 기능입니다. 배치·회전 탭 → <b style="color:#a371f7">■ 확장 배치</b> 체크박스로 활성화.</span><br>
+    <b style="color:#a371f7">■ 서브 스판이란?</b><br>
+    <span style="padding-left:10px">메인 스판이 들어가지 못한 빈 공간에 더 작은 스판을 자동으로 채우는 기능.</span><br>
+    <span style="padding-left:10px">설정 탭 → 고정식 스판 설정 → <b style="color:#a371f7">서브 스판</b> 체크박스로 활성화.</span><br>
+    <b style="color:#f7c948">▶ 두 기능 동시 사용 시 작동 순서</b><br>
+    <span style="padding-left:10px">① 메인 스판 배치 → ② 확장배치로 메인을 경계 한쪽으로 이동</span><br>
+    <span style="padding-left:10px">③ 이동된 메인 옆 빈 공간에 서브 스판이 자동으로 붙음</span><br>
+    <span style="padding-left:10px">④ 서브 스판이 경계선까지 연속으로 채워짐</span><br>
+    <span style="color:#f85149;padding-left:10px">⚠ 두 기능 모두 ON 상태에서 자동 탐색 시 속도가 느려질 수 있습니다 (정상)</span><br>
+    <b style="color:#a371f7">▶ 권장 작업 순서</b><br>
+    <span style="padding-left:10px">1. 설정 탭에서 메인/서브 스판 크기 설정</span><br>
+    <span style="padding-left:10px">2. 배치·회전 탭에서 <b>확장 배치</b> 체크 ON</span><br>
+    <span style="padding-left:10px">3. <b>✦ 최적 각도 자동 탐색</b> 실행 (서브 포함 발전량 최적화)</span><br>
+    <span style="padding-left:10px">4. 필요 시 <b>⤡ 확장 배치이동</b>으로 메인 위치 수동 조정</span><br>
+    <span style="color:#f7c948;padding-left:10px">💡 확장배치이동 후 OK를 누르면 서브 스판이 자동으로 재배치됩니다</span>
   </div>
 </div>
 
@@ -5460,6 +5718,8 @@ window._doSv=function(){
       sregion:(document.getElementById('sregion')||{}).value||'jeonnam',
       modTilt:(document.getElementById('mod-tilt')||{}).value||'15',
       modAzimuth:(document.getElementById('mod-azimuth')||{}).value||'0',
+      eEwMinrow:(document.getElementById('e-ew-minrow')||{}).value||'0',
+      eNsMinrow:(document.getElementById('e-ns-minrow')||{}).value||'0',
       iType:iType,orient:orient,rotA:rotA},
     view:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()},
     pvgis:{lat:_pvgisLat,lng:_pvgisLng},
@@ -5500,7 +5760,7 @@ function _restore(data){
   isFinished=false;confirmedMapImg=null;confirmedSVGImg=null;
   _typeSelected=false; /* 새 부지 그릴 때 유형 다시 선택하게 */
   var s=data.settings||{};
-  ['sname','saddr','mw','mh','mp','mg','mborder','sregion','mod-tilt','mod-azimuth'].forEach(function(id){
+  ['sname','saddr','mw','mh','mp','mg','mborder','sregion','mod-tilt','mod-azimuth','e-ew-minrow','e-ns-minrow'].forEach(function(id){
     var el=document.getElementById(id);
     var key=id.replace(/-([a-z])/g,function(m,c){return c.toUpperCase();}); /* mod-tilt → modTilt */
     if(el&&s[key]!==undefined)el.value=s[key];
