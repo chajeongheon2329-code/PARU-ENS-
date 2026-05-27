@@ -3596,55 +3596,125 @@ function _doPrintOverlay(){
     var o=document.getElementById('_report-overlay');if(o)o.remove();
     var ps=document.getElementById('_ov-print-style');if(ps)ps.remove();
   });
-  /* PDF 저장 버튼 — html2canvas + jsPDF */
+  /* PDF 저장 버튼 — 순수 흰 배경 iframe 캡처 방식 */
   var _pb=document.getElementById('_rep-pdf-btn');
   if(_pb)_pb.addEventListener('click',function(){
+    /* 파일명 입력 팝업 */
+    var defNm=(document.getElementById('sname')||{}).value||'태양광계획서';
+    var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace(/\.$/,'');
+    var defFile=defNm+'_'+dt;
+    var userNm=prompt('PDF 파일명을 입력하세요 (.pdf 자동추가):',defFile);
+    if(userNm===null)return; /* 취소 */
+    userNm=(userNm.trim()||defFile).replace(/\.pdf$/i,'');
     _pb.textContent='⏳ 생성 중...';_pb.disabled=true;
-    /* html2canvas + jsPDF CDN 동적 로드 */
+    /* 라이브러리 로드 헬퍼 */
     function _loadScript(src,cb){
       if(document.querySelector('script[src="'+src+'"]')){cb();return;}
-      var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
+      var s=document.createElement('script');s.src=src;
+      s.onerror=function(){cb(new Error('스크립트 로드 실패: '+src));};
+      s.onload=function(){cb(null);};
+      document.head.appendChild(s);
     }
-    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
-      _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
-        var ovEl=document.getElementById('_report-overlay');
-        /* 버튼 행 임시 숨김 */
-        var nopr=ovEl.querySelector('.no-print');if(nopr)nopr.style.visibility='hidden';
-        html2canvas(ovEl,{scale:1.5,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',
-          scrollX:0,scrollY:-window.scrollY,
-          width:ovEl.scrollWidth,height:ovEl.scrollHeight,
-          windowWidth:ovEl.scrollWidth,windowHeight:ovEl.scrollHeight
-        }).then(function(canvas){
-          if(nopr)nopr.style.visibility='';
-          var _jsPDF=window.jspdf?window.jspdf.jsPDF:window.jsPDF;
-          var pdf=new _jsPDF('p','mm','a4');
-          var pw=pdf.internal.pageSize.getWidth()-10;
-          var ph=pdf.internal.pageSize.getHeight()-10;
-          var iw=canvas.width,ih=canvas.height;
-          var ratio=pw/iw*3.7795; /* px to mm */
-          var totalH=ih*ratio;
-          var pages=Math.ceil(totalH/ph);
-          for(var pg=0;pg<pages;pg++){
-            if(pg>0)pdf.addPage();
-            var srcY=Math.round(pg*ph/ratio);
-            var srcH=Math.min(Math.round(ph/ratio),ih-srcY);
-            var c2=document.createElement('canvas');
-            c2.width=iw;c2.height=srcH;
-            c2.getContext('2d').drawImage(canvas,0,srcY,iw,srcH,0,0,iw,srcH);
-            pdf.addImage(c2.toDataURL('image/jpeg',0.92),'JPEG',5,5,pw,Math.min(ph,srcH*ratio));
-          }
-          var nm=(document.getElementById('sname')||{}).value||'태양광계획서';
-          var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','');
-          pdf.save(nm+'_'+dt+'.pdf');
-          _pb.textContent='📄 PDF 저장';_pb.disabled=false;
-          setSt('📄 PDF 저장 완료','g');
-        }).catch(function(err){
-          if(nopr)nopr.style.visibility='';
-          _pb.textContent='📄 PDF 저장';_pb.disabled=false;
-          alert('PDF 생성 실패. 브라우저 인쇄(공유→인쇄)를 이용해 주세요.\n'+err);
-        });
-      });
-    });
+    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(e1){
+    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(e2){
+      if(e1||e2){_pb.textContent='📄 PDF 저장';_pb.disabled=false;alert('라이브러리 로드 실패. 인터넷 연결을 확인해주세요.');return;}
+      /* ── 순수 흰 배경 HTML 조립 ── */
+      var ovEl=document.getElementById('_report-overlay');
+      if(!ovEl){_pb.textContent='📄 PDF 저장';_pb.disabled=false;return;}
+      /* no-print 영역(버튼 행) 내용 제외한 순수 보고서 HTML 추출 */
+      var cloned=ovEl.cloneNode(true);
+      var nopr=cloned.querySelector('.no-print');if(nopr)nopr.remove();
+      var bodyHtml=cloned.innerHTML;
+      /* 완전한 흰 배경 독립 HTML 문서 */
+      var pdfHtml='<!DOCTYPE html><html lang="ko"><head>'
+        +'<meta charset="UTF-8">'
+        +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+        +'<style>'
+        +'*{box-sizing:border-box;margin:0;padding:0}'
+        +'html,body{background:#fff!important;color:#1a1a2e!important;font-family:sans-serif;width:720px;padding:12px}'
+        +'h2{font-size:11px;color:#fff!important;background:#1a5276!important;padding:5px 10px;margin:10px 0 0;border-radius:4px 4px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        +'table{width:100%;border-collapse:collapse;font-size:11px}'
+        +'td,th{padding:5px 8px;border:1px solid #dde;color:#1a1a2e!important}'
+        +'th{background:#f0f4f8!important;font-weight:500;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        +'.hl td{font-weight:700;color:#1a5276!important;background:#fef9e7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        +'.gen td{color:#1a6b3a!important;font-weight:700}'
+        +'.map-wrap{margin:0 0 10px;border:2px solid #1a5276;border-radius:0 0 6px 6px;overflow:hidden}'
+        +'.map-wrap img{display:block;width:100%;height:auto}'
+        +'.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:12px}'
+        +'.logo{font-size:18px;font-weight:900;color:#e6a817!important}'
+        +'.foot{font-size:9px;color:#999;border-top:1px solid #eee;padding-top:6px;margin-top:14px;text-align:center}'
+        +'div[style*="background:#1a5276"],div[style*="background: #1a5276"]{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
+        +'div[style*="background:#1a6b3a"],div[style*="background:#7d3c11"]{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
+        +'</style></head><body>'+bodyHtml+'</body></html>';
+      /* iframe을 화면 밖에 생성 */
+      var ifr=document.createElement('iframe');
+      ifr.style.cssText='position:fixed;left:-9999px;top:0;width:720px;height:1px;border:none;background:#fff;visibility:hidden';
+      document.body.appendChild(ifr);
+      ifr.contentDocument.open();
+      ifr.contentDocument.write(pdfHtml);
+      ifr.contentDocument.close();
+      /* 이미지 로드 대기 후 캡처 */
+      setTimeout(function(){
+        var idoc=ifr.contentDocument||ifr.contentWindow.document;
+        var iBody=idoc.body;
+        var fullH=Math.max(iBody.scrollHeight,iBody.offsetHeight,3000);
+        ifr.style.height=fullH+'px';
+        /* 배경색 강제 흰색 */
+        iBody.style.background='#fff';
+        iBody.style.color='#1a1a2e';
+        setTimeout(function(){
+          html2canvas(iBody,{
+            scale:2,
+            useCORS:true,
+            allowTaint:true,
+            backgroundColor:'#ffffff',
+            scrollX:0,scrollY:0,
+            width:720,
+            height:fullH,
+            windowWidth:720,
+            windowHeight:fullH,
+            logging:false,
+            foreignObjectRendering:false
+          }).then(function(canvas){
+            document.body.removeChild(ifr);
+            var _jsPDF=window.jspdf?window.jspdf.jsPDF:(window.jsPDF||null);
+            if(!_jsPDF){_pb.textContent='📄 PDF 저장';_pb.disabled=false;alert('jsPDF 로드 실패');return;}
+            var pdf=new _jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+            var A4W=pdf.internal.pageSize.getWidth();  /* 210mm */
+            var A4H=pdf.internal.pageSize.getHeight(); /* 297mm */
+            var marg=8; /* 여백 mm */
+            var pw=A4W-marg*2;  /* 인쇄 영역 너비: 194mm */
+            var ph=A4H-marg*2;  /* 인쇄 영역 높이: 281mm */
+            /* canvas는 scale:2이므로 실제 논리 px = canvas.width/2 = 720px
+               pdf 너비 pw(mm)에 canvas 너비를 꽉 맞춤
+               → 1 canvas px = pw/canvas.width mm */
+            var PX_MM = pw / canvas.width;   /* mm per canvas-px */
+            var totalMM = canvas.height * PX_MM;
+            var pages = Math.ceil(totalMM / ph);
+            for(var pg=0; pg<pages; pg++){
+              if(pg>0) pdf.addPage();
+              /* 이번 페이지에 해당하는 canvas 세로 px 범위 */
+              var srcYpx = Math.round(pg * ph / PX_MM);
+              var srcHpx = Math.min(Math.round(ph / PX_MM), canvas.height - srcYpx);
+              if(srcHpx <= 0) break;
+              var c2 = document.createElement('canvas');
+              c2.width = canvas.width; c2.height = srcHpx;
+              c2.getContext('2d').drawImage(canvas, 0,srcYpx, canvas.width,srcHpx, 0,0, canvas.width,srcHpx);
+              /* 실제 내용 높이(mm) — 마지막 페이지는 짧을 수 있음 */
+              var imgH = srcHpx * PX_MM;
+              pdf.addImage(c2.toDataURL('image/jpeg',0.95), 'JPEG', marg, marg, pw, imgH);
+            }
+            pdf.save(userNm+'.pdf');
+            _pb.textContent='📄 PDF 저장';_pb.disabled=false;
+            setSt('📄 PDF 저장 완료: '+userNm+'.pdf','g');
+          }).catch(function(err){
+            document.body.removeChild(ifr);
+            _pb.textContent='📄 PDF 저장';_pb.disabled=false;
+            alert('PDF 생성 오류: '+err+'\n\n브라우저 공유→인쇄 메뉴를 이용해주세요.');
+          });
+        },600); /* 폰트/이미지 렌더 대기 */
+      },400);
+    });});
   });
   setSt('보고서 열림 — PDF 저장 또는 닫기','g');
 }
