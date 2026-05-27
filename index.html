@@ -3368,36 +3368,90 @@ function doPrint(){
 
 /* 모바일/홈화면앱 보고서 오버레이 */
 function _doPrintOverlay(){
-  var old=document.getElementById('_report-overlay');if(old)old.remove();
+  var oldOv=document.getElementById('_report-overlay');if(oldOv)oldOv.remove();
+  /* PC 보고서와 동일한 HTML을 오버레이로 표시 */
+  fillRpt();
+  var totalCnt=0,totalKw=0,totalArea=0;
+  zones.forEach(function(z){totalCnt+=z.cnt;totalKw+=parseFloat(z.kw);totalArea+=z.area;});
+  var ann=_calcAnnualGen(totalKw,zones).toFixed(1);
+  var _regSel=document.getElementById('sregion');
+  var _regKey=_regSel?_regSel.value:'jeonnam';
+  var _regLabel=_REGION_LABEL[_regKey]||_regKey;
+  var _baseGen=_getEffectiveGen();
+  var _isPvgis=!!(_pvgisGen&&_pvgisGen>0);
+  var _tf=_getTrackerFactor(zones);
+  var _tfPct=Math.round((_tf-1)*100);
+  var tm={'rf':'평판식','rg':'인삼밭식','fs':'고정식','fe':'단축식','fd':'양축식'};
+
+  /* PC 보고서와 동일한 CSS */
+  var css='*{box-sizing:border-box}body{font-family:sans-serif;max-width:720px;margin:0 auto;color:#1a1a2e;padding:0 12px}.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:12px}.logo{font-size:18px;font-weight:900;color:#e6a817}h2{font-size:11px;color:#fff;background:#1a5276;padding:5px 10px;margin:10px 0 0;border-radius:4px 4px 0 0}table{width:100%;border-collapse:collapse;font-size:11px}td,th{padding:5px 8px;border:1px solid #dde}th{background:#f0f4f8;font-weight:500;text-align:left}.hl td{font-weight:700;color:#1a5276;background:#fef9e7}.gen td{color:#1a6b3a;font-weight:700}.map-wrap{margin:0 0 10px;border:2px solid #1a5276;border-radius:0 0 6px 6px;overflow:hidden}.foot{font-size:9px;color:#999;border-top:1px solid #eee;padding-top:6px;margin-top:14px;text-align:center}@media print{.no-print{display:none!important}body{margin:5mm;max-width:100%}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}.hl td,.gen td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+
+  var html='<style>'+css+'</style>';
+  html+='<div class="no-print" style="position:sticky;top:0;background:#fff;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:8px 0 8px;border-bottom:2px solid #1a5276;margin-bottom:10px;gap:6px">';
+  html+='<b style="font-size:14px;color:#1a5276;white-space:nowrap">☀ 태양광 설치 계획서</b>';
+  html+='<div style="display:flex;gap:6px">';
+  html+='<button onclick="window.print()" style="background:#1a5276;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:sans-serif;white-space:nowrap">🖨 인쇄/PDF</button>';
+  html+='<button onclick="document.getElementById(\'_report-overlay\').remove()" style="background:#f85149;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:sans-serif;white-space:nowrap">✕ 닫기</button>';
+  html+='</div></div>';
+
+  html+='<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><div class="logo">☀ SOLARDESIGN</div></div><div style="font-size:13px;font-weight:700;color:#1a5276">태양광 설치 계획서</div></div>';
+  html+='<p style="font-size:10px;color:#777;margin-bottom:5px">작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+'</p>';
+  html+='<h2>현장 정보</h2><table><tr><td>현장명</td><td>'+(document.getElementById('sname').value||'미입력')+'</td></tr><tr><td>현장 주소</td><td>'+(document.getElementById('saddr').value||'미입력')+'</td></tr></table>';
+  html+='<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>예상 발전량</th><th>면적(m²)</th><th>경계이격</th></tr>';
+  zones.forEach(function(z,i){
+    var _zn=z.name||('부지 '+(i+1));
+    var _zGen=_getGenByType(z.iType||'rf',z.tilt,z.rotA);
+    var _zAnn=(parseFloat(z.kw||0)*_zGen/1000).toFixed(2);
+    html+='<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td class="gen">'+_zAnn+' MWh/년</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>';
+  });
+  html+='</table><h2>전체 합계</h2><table><tr class="hl"><td>총 모듈 수량</td><td>'+totalCnt+' 장</td></tr><tr class="hl"><td>총 설비 용량</td><td>'+totalKw.toFixed(2)+' kW</td></tr><tr><td>설치 면적</td><td>'+totalArea.toFixed(1)+' m²</td></tr><tr><td>예상 연간 발전량</td><td>'+ann+' MWh/년</td></tr></table>';
+
+  /* 견적 */
+  if(_estOn){
+    var _ppkFix2=parseFloat((document.getElementById('est-ppk-fix')||{}).value)||1100000;
+    var _ppkFe2=parseFloat((document.getElementById('est-ppk-fe')||{}).value)||1300000;
+    var _ppkFd2=parseFloat((document.getElementById('est-ppk-fd')||{}).value)||1500000;
+    function _ppkByType2m(t){return t==='fe'?_ppkFe2:t==='fd'?_ppkFd2:_ppkFix2;}
+    var _vat2=parseFloat((document.getElementById('est-vat')||{}).value)||0;
+    var _fmtN=function(n){return Math.round(n).toLocaleString('ko-KR');};
+    var _vatLbl2=_vat2?('포함('+_vat2+'%)'):'미포함';
+    var _sup2=0,_breakdownRows='';
+    zones.forEach(function(z){
+      var kw2=parseFloat(z.kw||0);if(!kw2)return;
+      var ppk2=_ppkByType2m(z.iType);var sup2=kw2*ppk2;_sup2+=sup2;
+      _breakdownRows+='<tr><td>'+(z.name||'부지')+' ('+tm[z.iType]+')</td><td>'+kw2.toFixed(2)+' kW</td><td>'+_fmtN(ppk2)+' 원/kW</td><td>'+_fmtN(sup2)+' 원</td></tr>';
+    });
+    var _vatA2=Math.round(_sup2*_vat2/100),_tot2=Math.round(_sup2)+_vatA2;
+    html+='<h2 style="background:#1a6b3a">💰 견적 계산</h2>';
+    html+='<table><tr><th>부지명</th><th>용량</th><th>단가 (원/kW)</th><th>금액</th></tr>'+_breakdownRows;
+    html+='<tr><td colspan="3" style="text-align:right">공급가액 합계</td><td>'+_fmtN(_sup2)+' 원</td></tr>';
+    html+='<tr><td colspan="3" style="text-align:right">부가세 ('+_vatLbl2+')</td><td>'+_fmtN(_vatA2)+' 원</td></tr>';
+    html+='<tr class="hl"><td colspan="3"><b>총 견적금액</b></td><td style="font-size:13px;font-weight:900;color:#1a6b3a">'+_fmtN(_tot2)+' 원</td></tr>';
+    html+='</table>';
+  }
+
+  /* 배치도 */
+  var hasUserPhotos=confirmedMapImgs&&confirmedMapImgs.length>0;
+  if(!hasUserPhotos&&zones.length){confirmedSVGImg=svgToDataUrl(buildPrintSVG());}
+  if(confirmedSVGImg&&!hasUserPhotos)html+='<h2>배치 현황 (자동 생성)</h2><div class="map-wrap"><img src="'+confirmedSVGImg+'" style="width:100%;height:auto;display:block"></div>';
+  if(hasUserPhotos){
+    html+='<h2>메인 사진</h2><div class="map-wrap"><img src="'+confirmedMapImgs[0].src+'" style="width:100%;height:auto;display:block;max-height:320px;object-fit:contain"></div>';
+    if(confirmedMapImgs.length>1){
+      var refImgs=confirmedMapImgs.slice(1);
+      html+='<h2>참고 사진 ('+refImgs.length+'장)</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+      refImgs.forEach(function(img,i){html+='<div style="border:1px solid #dde;border-radius:4px;overflow:hidden"><img src="'+img.src+'" style="width:100%;height:160px;object-fit:cover;display:block"><div style="font-size:9px;color:#999;padding:2px 5px">참고사진 '+(i+1)+(img.name?' — '+img.name:'')+'</div></div>';});
+      html+='</div>';
+    }
+  }
+  html+='<div class="foot">본 계획서는 ☀ SOLARDESIGN (PARU ENS)으로 자동 생성된 참고 자료입니다.</div>';
+
+  /* 오버레이 표시 */
   var ov=document.createElement('div');
   ov.id='_report-overlay';
-  ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow:auto;padding:16px;box-sizing:border-box;font-family:sans-serif';
-  var html=_buildReportHtml();
-  ov.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:0;background:#fff;padding:8px 0;border-bottom:2px solid #1a5276">'
-    +'<b style="font-size:16px;color:#1a5276">☀ 태양광 설치 계획서</b>'
-    +'<div style="display:flex;gap:8px">'
-    +'<button onclick="window.print()" style="background:#1a5276;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">🖨 인쇄</button>'
-    +'<button onclick="document.getElementById(\'_report-overlay\').remove()" style="background:#f85149;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">✕ 닫기</button>'
-    +'</div></div>'
-    +html;
+  ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow:auto;padding:12px;box-sizing:border-box';
+  ov.innerHTML=html;
   document.body.appendChild(ov);
-  setSt('보고서 열림 (닫기 버튼으로 닫기)','g');
-}
-function _buildReportHtml(){
-  var totalCnt=0,totalKw=0,totalArea=0;zones.forEach(function(z){totalCnt+=z.cnt;totalKw+=parseFloat(z.kw);totalArea+=z.area;});
-  var ann=_calcAnnualGen(totalKw,zones).toFixed(1);
-  var tm={'rf':'평판식','rg':'인삼밭식','fs':'고정식','fe':'단축식','fd':'양축식'};
-  var rows='';zones.forEach(function(z,i){
-    var zn=z.name||('부지 '+(i+1));var zGen=_getGenByType(z.iType||'rf',z.tilt,z.rotA);
-    var zAnn=(parseFloat(z.kw||0)*zGen/1000).toFixed(2);
-    rows+='<tr><td>'+(zn+' ('+tm[z.iType]+')')+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td>'+zAnn+' MWh/년</td><td>'+(z.borderOff||0)+' mm</td></tr>';
-  });
-  return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<tr style="background:#f0f4f8"><th style="padding:6px;border:1px solid #dde;text-align:left">부지명</th><th style="padding:6px;border:1px solid #dde">모듈수</th><th style="padding:6px;border:1px solid #dde">용량</th><th style="padding:6px;border:1px solid #dde">연발전량</th><th style="padding:6px;border:1px solid #dde">이격</th></tr>'
-    +rows
-    +'<tr style="font-weight:700;background:#fef9e7"><td colspan="3" style="padding:6px;border:1px solid #dde">합계</td><td style="padding:6px;border:1px solid #dde;color:#1a6b3a">'+ann+' MWh/년</td><td style="padding:6px;border:1px solid #dde"></td></tr>'
-    +'</table>'
-    +'<p style="font-size:11px;color:#999;margin-top:16px">본 계획서는 ☀ SOLARDESIGN 시스템으로 자동 생성된 참고 자료입니다.</p>';
+  setSt('보고서 열림 — 인쇄/PDF 저장 또는 닫기','g');
 }
 
 window.captureFileDone=function(){document.getElementById('capture-file-input').click();};
@@ -4947,642 +5001,589 @@ var _manualCurrentTool='all';
 var _manualToolContent={
   all:`
 <div style="font-size:15px;font-weight:900;color:#f7c948;text-align:center;padding:14px 0 4px;letter-spacing:1px">📖 SOLARDESIGN 전체 사용 가이드</div>
-<div style="font-size:12px;color:#8b949e;text-align:center;margin-bottom:14px">순서대로 따라하면 누구나 완성할 수 있습니다</div>
+<div style="font-size:12px;color:#8b949e;text-align:center;margin-bottom:14px">순서대로 따라하면 누구나 완성 | PC · 모바일 동일 사용 가능</div>
 
-<!-- STEP 0: 화면 구성 -->
+<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(247,201,72,.14);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">앱 설치</div>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">홈화면에 앱으로 설치하기 (선택)</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#3fb950">📲 안드로이드 (크롬)</b><br>
+    <span style="padding-left:12px">··· 메뉴 탭 → <b>「앱 설치」</b> 또는 「홈 화면에 추가」 선택</span><br>
+    <b style="color:#58a6ff">🍎 iPhone / iPad (사파리 필수)</b><br>
+    <span style="padding-left:12px">하단 <b>공유 버튼 (□↑)</b> 탭 → <b>「홈 화면에 추가」</b> → 「추가」</span><br>
+    <span style="padding-left:12px;color:#f85149">⚠ 크롬 앱이 아닌 사파리에서 열어야 합니다</span><br>
+    <b style="color:#f7c948">💻 PC (크롬 / 엣지)</b><br>
+    <span style="padding-left:12px">주소창 오른쪽 <b>설치 아이콘(□+)</b> 클릭 또는 상단 ··· → 앱 설치</span><br>
+    <span style="color:#f7c948;padding-left:12px">💡 설치 후 오프라인에서도 실행, 전체화면 앱처럼 사용 가능</span>
+  </div>
+</div>
+
 <div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
   <div style="background:rgba(247,201,72,.14);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
     <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">화면 구성</div>
-    <span style="font-size:13px;font-weight:700;color:#f7c948">상단 툴바 / 지도 / 오른쪽 패널</span>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">상단 툴바 / 지도 / 오른쪽 패널 (PC)</span>
   </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#f7c948">📲 앱 설치</b> — 홈화면에 앱으로 설치 (크롬 전용)<br>
-    <b style="color:#f7c948">💾 저장 ▾</b> — 현장 저장·불러오기 (JSON)<br>
-    <b style="color:#ff7700">● 그리기</b> — 부지 경계선 그리기 모드<br>
-    <b style="color:#8b949e">✥ 이동</b> — 지도 이동 / 줌<br>
-    <b style="color:#58a6ff">⤢ 모듈이동 ▾</b> — 확장배치이동 / 전체배치이동 / 개별이동<br>
-    <b style="color:#bc8cff">✂ 삭제 ▾</b> — 단일 / 드래그 / 스판 삭제<br>
-    <b style="color:#3fb950">✓ 확정</b> — 현재 부지 확정 저장<br>
-    <b style="color:#58a6ff">★ 완성</b> — 전체 완료 후 보고서 생성<br>
-    <b style="color:#f0f6fc">오른쪽 패널 탭</b>: 설정 / 배치·회전 / 부지목록 / 보고서
-  </div>
-</div>
-
-<!-- STEP 1: 현장 설정 -->
-<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(255,119,0,.12);padding:8px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#ff7700;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 1</div>
-    <span style="font-size:13px;font-weight:700;color:#ff9944">현장 설정 — 설정 탭</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#ff9944">① 현장명 입력</b> — 보고서에 사용될 현장 이름<br>
-    <b style="color:#ff9944">② 주소 검색</b> — 주소 입력 후 🔍 클릭 → 지도 자동 이동 + 일사량 데이터(PVGIS) 자동 로드<br>
-    <span style="color:#f7c948;padding-left:10px">💡 주소 검색을 해야 실측 일사량 기반 발전량 계산이 활성화됩니다</span><br>
-    <b style="color:#ff9944">③ 모듈 사양 입력</b> — 폭(mm) / 높이(mm) / 출력(W) / 모듈간격(mm)<br>
-    <b style="color:#ff9944">④ 설치 유형 선택</b><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">평판식(지붕)</b> — 경사지붕에 빽빽하게 배치</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">인삼밭식</b> — 행 간격(남북 이격) 지정 배치</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">고정식(스판)</b> — 스판 단위 배치 + 서브 스판 자동 채움</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">단축식(1축 추적)</b> — 동서 또는 남북 추적</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">양축식(2축 추적)</b> — 포스트 간격 기반 2축 추적</span><br>
-    <b style="color:#ff9944">⑤ 경사각 설정</b> — 버튼(10°/15°/20°/25°/30°) 또는 직접 입력, 슬라이더 조정<br>
-    <span style="color:#f7c948;padding-left:10px">💡 경사각 변경 즉시 POA·발전량 자동 재계산</span><br>
-    <b style="color:#ff9944">⑥ 지역 선택</b> — PVGIS 미조회 시 지역별 평균 발전량 사용<br>
-    <b style="color:#ff9944">⑦ 경계 이격</b> — 부지 경계에서 모듈까지 최소 이격거리(mm)
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#ff7700">● 그리기 ▾</b> — 부지 경계 그리기 / 점 수정<br>
+    <b style="color:#3fb950">✦ 자동배치</b> — 최적 각도 탐색 후 자동 배치 (핵심 기능!)<br>
+    <b style="color:#58a6ff">⤢ 모듈이동 ▾</b> — 모듈 위치 조정 패널 (PC 전용 표시)<br>
+    <b style="color:#f85149">✂ 삭제 ▾</b> — 모듈/스판/행/열 삭제<br>
+    <b style="color:#3fb950">✓ 확정</b> — 현재 배치 확정 및 부지목록 저장<br>
+    <b style="color:#f85149">✕ 초기화</b> — 전체 초기화<br>
+    <b style="color:#f7c948">오른쪽 패널</b> — 설정 / 배치·회전 / 부지목록 / 보고서 탭<br>
+    <b style="color:#8b949e">모바일</b> — ··· 메뉴에서 추가 기능 접근<br>
+    <b style="color:#58a6ff">하단 바</b> — 전체 모듈수 · 용량 · 면적 · 연간발전량 실시간 표시
   </div>
 </div>
 
-<!-- STEP 2: 고정식 스판 설정 -->
+<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(247,201,72,.14);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 1</div>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">모듈 · 설치 기본 설정 (오른쪽 패널 → 설정 탭)</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b>모듈 폭/높이</b> — 실제 모듈 규격 mm (예: 1134 × 2382)<br>
+    <b>모듈 출력</b> — 모듈 1장 Wp (예: 655W)<br>
+    <b>모듈 간격</b> — 모듈 사이 간격 mm (예: 10)<br>
+    <b>경계 이격</b> — 부지 경계선에서 모듈까지 최소 이격 거리 mm<br>
+    <b>설치 경사각</b> — 태양광 패널 경사각 °. 발전량 계산에 직접 영향<br>
+    <b>설치 유형</b> — 평판식 / 인삼밭식 / 고정식 / 단축식 / 양축식<br>
+    <b>지역·발전량</b> — 설치 지역 선택 또는 PVGIS 자동 일사량 데이터 수신<br>
+    <span style="color:#f7c948;padding-left:12px">💡 설정 변경 시 배치 자동 재계산</span>
+  </div>
+</div>
+
+<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(247,201,72,.14);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 2</div>
+    <span style="font-size:13px;font-weight:700;color:#f7c948">부지 그리기</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#ff7700">● 그리기</b> 클릭 → <b>부지 그리기</b> 선택<br>
+    지도에서 <b>클릭으로 꼭짓점</b>을 찍어 부지 외곽선 그리기<br>
+    <b>마지막 점을 첫 점에 클릭</b>하거나 <b>더블클릭</b>으로 완성<br>
+    완성되면 모듈이 즉시 자동 배치됨<br>
+    <b style="color:#e88c00">◈ 점 수정</b> — 꼭짓점 드래그로 부지 형태 조정<br>
+    <b style="color:#e88c00">+ 점 추가</b> — 변의 중간점 클릭으로 꼭짓점 추가<br>
+    <span style="color:#f7c948;padding-left:12px">💡 주소 검색(오른쪽 패널)으로 원하는 지역 이동</span>
+  </div>
+</div>
+
+<div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(63,185,80,.12);padding:8px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 3</div>
+    <span style="font-size:13px;font-weight:700;color:#3fb950">✦ 자동배치 (핵심!)</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#3fb950">✦ 자동배치</b> 버튼 클릭 한 번으로:<br>
+    <span style="padding-left:12px">0°~180° 전 각도를 탐색 → 발전량 또는 모듈 수 최대 각도 자동 선택</span><br>
+    <span style="padding-left:12px">PVGIS 연결 시 실제 일사량 기반 발전량 최적화</span><br>
+    <span style="padding-left:12px">단축식/양축식: 모듈 수 최대화 + 열당 최소 장수 조건 동시 적용</span><br>
+    <b>배치·회전 탭</b>에서 각도를 슬라이더로 수동 조정도 가능<br>
+    <b>NS/EW 간격</b> — 행·열 간격 직접 설정 (mm)<br>
+    <b style="color:#a371f7">■ 고정식 스판</b> — 스판 열·행 수, 서브 스판 크기 설정<br>
+    <b style="color:#a371f7">서브 스판 ON</b> — 메인 스판이 못 들어간 빈 공간에 작은 스판 자동 배치
+  </div>
+</div>
+
+<div style="background:#1c2230;border:1px solid rgba(163,113,247,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
+  <div style="background:rgba(163,113,247,.12);padding:8px 14px;border-bottom:1px solid rgba(163,113,247,.25);display:flex;align-items:center;gap:8px">
+    <div style="background:#a371f7;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">고급</div>
+    <span style="font-size:13px;font-weight:700;color:#a371f7">확장배치 + 서브스판 동시 사용</span>
+  </div>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#a371f7">확장 배치란?</b> — 고정식 스판을 경계 한쪽으로 밀어 빈 공간 확보<br>
+    <span style="padding-left:12px">배치·회전 탭 → <b>■ 확장 배치</b> 체크 ON</span><br>
+    <b style="color:#f7c948">동시 사용 순서</b><br>
+    <span style="padding-left:12px">① 메인 스판 배치 → ② 확장배치로 경계 한쪽에 밀착</span><br>
+    <span style="padding-left:12px">③ 남은 공간에 메인 추가 → ④ 서브 스판이 메인 옆에 자동 배치</span><br>
+    <b style="color:#a371f7">⤡ 확장 배치이동</b> — 모듈이동 패널 → 드래그로 위치 세밀 조정<br>
+    <span style="padding-left:12px">✓ OK 클릭 → 경계 밖 정리 + 서브 스판 자동 재배치</span><br>
+    <span style="color:#f85149;padding-left:12px">⚠ 단축식 동서축에서는 확장배치이동 사용 불가</span>
+  </div>
+</div>
+
 <div style="background:#1c2230;border:1px solid rgba(88,166,255,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
   <div style="background:rgba(88,166,255,.12);padding:8px 14px;border-bottom:1px solid rgba(88,166,255,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 2</div>
-    <span style="font-size:13px;font-weight:700;color:#79c0ff">고정식 스판 설정 (고정식 선택 시)</span>
+    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 4</div>
+    <span style="font-size:13px;font-weight:700;color:#58a6ff">모듈 이동 · 삭제</span>
   </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#79c0ff">스판 가로/세로</b> — 메인 스판 1개의 모듈 배열 수 (예: 가로 5장 × 세로 4장)<br>
-    <b style="color:#79c0ff">스판 간격(동서)</b> — 스판 사이 동서 방향 간격(mm)<br>
-    <b style="color:#79c0ff">남북 이격(행간격)</b> — 스판 사이 남북 방향 이격거리(mm). 일조권 확보용<br>
-    <span style="color:#f7c948;padding-left:10px">💡 남북 이격 힌트가 자동 계산됩니다 (경사각·모듈 높이 기준)</span><br>
-    <b style="color:#79c0ff">서브 스판 (체크박스)</b> — 메인 스판이 못 들어간 빈 자리를 작은 스판으로 자동 채움<br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">서브 가로/세로</b>: 서브 스판 배열 수 (메인보다 작게 설정)</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 서브 스판은 메인 스판 실패 격자에만 배치되며, 메인과 절대 겹치지 않습니다</span>
-  </div>
-</div>
-
-<!-- 확장배치 + 서브스판 -->
-<div style="background:#1c2230;border:1px solid rgba(163,113,247,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(163,113,247,.12);padding:8px 14px;border-bottom:1px solid rgba(163,113,247,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#a371f7;color:#000;font-weight:900;font-size:13px;border-radius:4px;padding:2px 8px">고급</div>
-    <span style="font-size:13px;font-weight:700;color:#a371f7">확장 배치 + 서브 스판 동시 사용</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:13px;color:#dde4ed;line-height:2">
-    <b style="color:#a371f7">■ 확장 배치란?</b><br>
-    <span style="padding-left:10px">고정식 스판에서 메인 스판을 경계 한쪽 방향으로 최대한 밀어 넣어</span><br>
-    <span style="padding-left:10px">빈 공간을 확보하는 기능입니다. 배치·회전 탭 → <b style="color:#a371f7">■ 확장 배치</b> 체크박스로 활성화.</span><br>
-    <b style="color:#a371f7">■ 서브 스판이란?</b><br>
-    <span style="padding-left:10px">메인 스판이 들어가지 못한 빈 공간에 더 작은 스판을 자동으로 채우는 기능.</span><br>
-    <span style="padding-left:10px">설정 탭 → 고정식 스판 설정 → <b style="color:#a371f7">서브 스판</b> 체크박스로 활성화.</span><br>
-    <b style="color:#f7c948">▶ 두 기능 동시 사용 시 작동 순서</b><br>
-    <span style="padding-left:10px">① 메인 스판 배치 → ② 확장배치로 메인을 경계 한쪽으로 이동</span><br>
-    <span style="padding-left:10px">③ 이동된 메인 옆 빈 공간에 서브 스판이 자동으로 붙음</span><br>
-    <span style="padding-left:10px">④ 서브 스판이 경계선까지 연속으로 채워짐</span><br>
-    <span style="color:#f85149;padding-left:10px">⚠ 두 기능 모두 ON 상태에서 자동 탐색 시 속도가 느려질 수 있습니다 (정상)</span><br>
-    <b style="color:#a371f7">▶ 권장 작업 순서</b><br>
-    <span style="padding-left:10px">1. 설정 탭에서 메인/서브 스판 크기 설정</span><br>
-    <span style="padding-left:10px">2. 배치·회전 탭에서 <b>확장 배치</b> 체크 ON</span><br>
-    <span style="padding-left:10px">3. <b>✦ 최적 각도 자동 탐색</b> 실행 (서브 포함 발전량 최적화)</span><br>
-    <span style="padding-left:10px">4. 필요 시 <b>⤡ 확장 배치이동</b>으로 메인 위치 수동 조정</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 확장배치이동 후 OK를 누르면 서브 스판이 자동으로 재배치됩니다</span>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#58a6ff">⤢ 모듈이동</b> 패널:<br>
+    <span style="padding-left:12px"><b>⤡ 확장 배치이동</b> — 고정식 전용, 메인 스판 전체 이동</span><br>
+    <span style="padding-left:12px"><b>🔲 전체 배치이동</b> — 모든 모듈 한번에 드래그</span><br>
+    <span style="padding-left:12px"><b>📌 개별 모듈 이동</b> — 클릭한 모듈 1장 드래그</span><br>
+    <span style="padding-left:12px"><b>▦ 스판 이동</b> — 클릭한 스판 전체 드래그 (BFS 자동 감지)</span><br>
+    <span style="padding-left:12px">이동 후 <b>✓ 완료</b> → 경계 밖 자동 정리</span><br>
+    <b style="color:#bc8cff">✂ 삭제</b> 패널: 모듈 / 스판 / 행 / 열 / 단축식 포스트 열 삭제<br>
+    <span style="padding-left:12px"><b>↩ 실행취소</b>로 마지막 삭제 되돌리기 가능</span><br>
+    <span style="color:#f7c948;padding-left:12px">💡 이동 확정 후 설정 변경 시 이동된 배치 유지됨 (의도적 설계)</span>
   </div>
 </div>
 
-<!-- STEP 3: 부지 그리기 -->
-<div style="background:#1c2230;border:1px solid rgba(255,119,0,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(255,119,0,.12);padding:8px 14px;border-bottom:1px solid rgba(255,119,0,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#ff7700;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 3</div>
-    <span style="font-size:13px;font-weight:700;color:#ff9944">부지 경계 그리기 — ● 그리기 버튼</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#ff9944">① ● 그리기</b> 클릭 → 지도에서 <b style="color:#f0f6fc">클릭으로 꼭짓점 추가</b><br>
-    <b style="color:#ff9944">② 마지막 꼭짓점에서 더블클릭</b> 또는 <b style="color:#ff9944">첫 꼭짓점 클릭</b> → 경계 완성 + 모듈 자동 배치<br>
-    <b style="color:#ff9944">③ 서브패널 도구</b><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">꼭짓점 추가</b>: 기본 그리기 모드</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">점 수정</b>: 기존 꼭짓점 드래그로 위치 조정</span><br>
-    <span style="padding-left:10px">• <b style="color:#f0f6fc">길이 수정</b>: 변의 정확한 길이 입력</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 위성지도 활용: 지적도로 경계 확인 → 위성으로 전환 후 그리기</span>
-  </div>
-</div>
-
-<!-- STEP 4: 배치 최적화 -->
 <div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
   <div style="background:rgba(63,185,80,.12);padding:8px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 4</div>
-    <span style="font-size:13px;font-weight:700;color:#3fb950">배치 최적화 — 배치·회전 탭</span>
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 5</div>
+    <span style="font-size:13px;font-weight:700;color:#3fb950">확정 · 저장 · 보고서</span>
   </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#3fb950">✦ 최적 각도 자동 탐색</b><br>
-    <span style="padding-left:10px">주소 검색 후 (PVGIS 데이터 있음): <b style="color:#f0f6fc">모듈수 × POA 발전량</b> 최대 각도 탐색</span><br>
-    <span style="padding-left:10px">주소 미검색 시: <b style="color:#f0f6fc">모듈수 × 남향 보너스</b> 방식으로 탐색</span><br>
-    <span style="padding-left:10px">→ 5° 간격 1차 탐색 후 ±8° 1° 세밀 탐색 (2단계)</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 주소 검색 먼저! 그래야 실제 발전량 기준으로 최적각을 찾습니다</span><br>
-    <b style="color:#f7c948">⟳ 회전 슬라이더</b> — 슬라이더 드래그 또는 방향 버튼으로 수동 조정<br>
-    <b style="color:#58a6ff">⤢ 모듈이동 ▾</b><br>
-    <span style="padding-left:10px">• <b style="color:#a371f7">⤡ 확장 배치이동</b>: 경계 3배 확장 그리드 → 드래그 → ✓ OK</span><br>
-    <span style="padding-left:10px">• <b style="color:#58a6ff">🔲 전체 배치이동</b>: 현재 배치 그대로 전체 이동</span><br>
-    <span style="padding-left:10px">• <b style="color:#3fb950">📌 개별 모듈 이동</b>: 클릭으로 선택 → OK → 드래그</span><br>
-    <b style="color:#bc8cff">✂ 삭제 ▾</b><br>
-    <span style="padding-left:10px">• <b style="color:#bc8cff">🖱 단일 삭제</b>: 모듈 클릭 1장씩 제거</span><br>
-    <span style="padding-left:10px">• <b style="color:#bc8cff">⬚ 드래그 삭제</b>: 범위 드래그로 일괄 제거</span><br>
-    <span style="padding-left:10px">• <b style="color:#bc8cff">▦ 스판 삭제</b>: 클릭한 모듈의 스판 전체 제거</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 스판 삭제는 고정식에서 스판 단위로 제거할 때 유용합니다</span>
+  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2.1">
+    <b style="color:#3fb950">✓ 확정</b> → 부지목록 탭에 저장, 여러 부지 합산 가능<br>
+    <b style="color:#3fb950">🖨 보고서 인쇄</b><br>
+    <span style="padding-left:12px"><b>PC</b>: 새 창 열림 → 브라우저 인쇄(Ctrl+P) 또는 PDF 저장</span><br>
+    <span style="padding-left:12px"><b>모바일/홈화면앱</b>: 오버레이 표시 → <b>🖨 인쇄/PDF</b> 탭</span><br>
+    <span style="padding-left:12px"><b>iPhone PDF 저장</b>: 인쇄 화면 → 핀치 아웃(두 손가락 벌리기) → 공유 → PDF 저장</span><br>
+    <b style="color:#f7c948">💾 저장 ▾</b> → JSON 파일로 저장 → 나중에 불러오기로 이어서 작업<br>
+    <b style="color:#3fb950">📷 현장 사진</b> — 보고서 탭에서 사진 첨부 (최대 여러 장, 드래그 순서 변경)<br>
+    <b style="color:#3fb950">💰 견적 계산</b> — 유형별 단가 입력 시 견적+수익 시뮬레이션 자동 생성<br>
+    <span style="color:#f7c948;padding-left:12px">💡 다중 부지: 각 부지 확정 → 부지목록에서 전체 합산 확인</span>
   </div>
 </div>
-
-<!-- STEP 5: 확정 & 다중 부지 -->
-<div style="background:#1c2230;border:1px solid rgba(247,201,72,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(247,201,72,.12);padding:8px 14px;border-bottom:1px solid rgba(247,201,72,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#f7c948;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 5</div>
-    <span style="font-size:13px;font-weight:700;color:#f7c948">부지 확정 & 다중 부지</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#3fb950">✓ 확정</b> 클릭 → 현재 부지+모듈 고정 → 부지목록 탭에 추가<br>
-    확정 후 <b style="color:#ff7700">● 그리기</b>로 새 부지 추가 가능 (현장 내 여러 부지)<br>
-    <b style="color:#f7c948">부지 수정</b>: 부지목록 탭 → 각 부지 카드 ✏ 수정 버튼<br>
-    <b style="color:#f85149">부지 삭제</b>: 부지목록 탭 🗑 삭제 또는 지도에서 경계선 더블클릭<br>
-    <b style="color:#f7c948">부지명 수정</b>: 부지목록 탭 입력란에서 직접 수정 (보고서에 반영)<br>
-    <span style="color:#f7c948;padding-left:10px">💡 부지마다 설치 유형·경사각·스판 설정을 다르게 할 수 있습니다</span>
-  </div>
-</div>
-
-<!-- STEP 6: 저장 & 불러오기 -->
-<div style="background:#1c2230;border:1px solid rgba(57,211,83,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(57,211,83,.12);padding:8px 14px;border-bottom:1px solid rgba(57,211,83,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#39d353;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 6</div>
-    <span style="font-size:13px;font-weight:700;color:#39d353">저장 & 불러오기</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#39d353">💾 저장</b> — 현재 작업 전체를 JSON 파일로 저장 (자동 파일명: 현장명)<br>
-    <b style="color:#f7c948">✏ 다른 이름으로 저장</b> — 다른 파일명으로 저장<br>
-    <b style="color:#79c0ff">📂 불러오기(파일)</b> — 저장된 JSON 파일 불러오기<br>
-    <b style="color:#dde4ed">📁 저장된 현장 목록</b> — 브라우저에 저장된 현장 바로 열기<br>
-    <span style="color:#f7c948;padding-left:10px">💡 중간 저장 습관: 확정할 때마다 저장하면 데이터 손실을 방지합니다</span>
-  </div>
-</div>
-
-<!-- STEP 7: 보고서 -->
-<div style="background:#1c2230;border:1px solid rgba(63,185,80,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(63,185,80,.12);padding:8px 14px;border-bottom:1px solid rgba(63,185,80,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#3fb950;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">STEP 7</div>
-    <span style="font-size:13px;font-weight:700;color:#3fb950">보고서 생성 & 출력</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#58a6ff">★ 완성</b> 클릭 → 보고서 탭 자동 이동<br>
-    보고서 포함 항목:<br>
-    <span style="padding-left:10px">• 현장명 / 주소</span><br>
-    <span style="padding-left:10px">• 부지별: 유형·모듈수·용량·면적·이격거리</span><br>
-    <span style="padding-left:10px">• 전체합계: 총 모듈수·총 용량(kW)·예상 발전량(MWh/년)</span><br>
-    <span style="padding-left:10px">• 배치현황 이미지(자동생성) + 첨부 사진</span><br>
-    <b style="color:#3fb950">🖨 인쇄</b> → 새 창 자동 열기 → PDF 저장 가능<br>
-    <b style="color:#dde4ed">📥 CSV</b> → 엑셀용 데이터 파일 다운로드<br>
-    <b style="color:#f7c948">📷 참고사진 첨부</b> → 첫 번째=메인(큰 사진), 나머지=참고(2열)<br>
-    <span style="color:#f7c948;padding-left:10px">💡 썸네일 드래그로 사진 순서 변경 가능</span><br>
-    <span style="color:#f85149;padding-left:10px">⚠ 사진 첨부 시 자동 배치현황 이미지는 숨겨집니다</span>
-  </div>
-</div>
-
-<!-- 발전량 산출 안내 -->
-<div style="background:#1c2230;border:1px solid rgba(163,113,247,.35);border-radius:10px;overflow:hidden;margin-bottom:10px">
-  <div style="background:rgba(163,113,247,.12);padding:8px 14px;border-bottom:1px solid rgba(163,113,247,.25);display:flex;align-items:center;gap:8px">
-    <div style="background:#a371f7;color:#000;font-weight:900;font-size:12px;border-radius:4px;padding:2px 8px">⚡ 발전량</div>
-    <span style="font-size:13px;font-weight:700;color:#a371f7">발전량 산출 방식</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#a371f7">PVGIS 실측 모드</b> (주소 검색 후 자동 활성화)<br>
-    <span style="padding-left:10px">Open-Meteo ERA5 일별 GHI → Erbs 모델 → POA 경사면 일사량 계산</span><br>
-    <span style="padding-left:10px">발전량 = POA × PR(0.78) × 설비용량(kWp)</span><br>
-    <span style="padding-left:10px">경사각/방위각 변경 시 실시간 재계산</span><br>
-    <b style="color:#8b949e">지역 평균 모드</b> (주소 미검색 시)<br>
-    <span style="padding-left:10px">전남·전북·경남·경북 등 지역별 연평균값 사용</span><br>
-    <b style="color:#79c0ff">유형별 보정</b><br>
-    <span style="padding-left:10px">단축식: 고정식 대비 +11% / 양축식: +23%</span><br>
-    <span style="color:#f7c948;padding-left:10px">💡 최적 각도 탐색 시 PVGIS 모드에서는 실제 발전량 기준으로 각도를 선택합니다</span>
-  </div>
-</div>
-
-<!-- 단축키 & 팁 -->
-<div style="background:#1c2230;border:1px solid #30363d;border-radius:10px;overflow:hidden">
-  <div style="background:#161b22;padding:8px 14px;border-bottom:1px solid #30363d">
-    <span style="font-size:13px;font-weight:700;color:#8b949e">⌨ 단축키 & 팁</span>
-  </div>
-  <div style="background:#0d1117;padding:10px 14px;font-size:12px;color:#dde4ed;line-height:2">
-    <b style="color:#f0f6fc">ESC</b> — 전체화면 모드 종료<br>
-    <b style="color:#f0f6fc">지도 스크롤</b> — 줌 인/아웃 (이동 모드에서)<br>
-    <b style="color:#f7c948">지적도 비율 고정</b>: 지적도 선택 → 🔒 비율고정 ON → 다른 지도 전환 가능<br>
-    <b style="color:#f7c948">다중 부지 팁</b>: 부지마다 다른 설치 유형 가능 (지붕+노지 혼합 현장)<br>
-    <b style="color:#f7c948">발전량 탭</b>: 설정 탭 하단에서 경제성 시뮬레이션 가능 (SMP·REC 단가 입력)
-  </div>
-</div>
-
 `,
       draw:`<div style="border:1px solid rgba(255,119,0,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(255,119,0,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,119,0,.2)">
-      <div style="background:#ff7700;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">● 그리기</div>
-      <span style="font-size:15px;font-weight:700;color:#ff7700">부지 경계선 그리기</span>
+  <div style="background:rgba(255,119,0,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,119,0,.2)">
+    <div style="background:#ff7700;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">● 그리기</div>
+    <span style="font-size:15px;font-weight:700;color:#ff7700">부지 경계선 그리기</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(255,119,0,.25);margin-bottom:8px">
+      <b style="color:#ff7700;font-size:14px">● 부지 그리기</b>
+      <div style="line-height:1.9;margin-top:4px">
+        지도에서 <b>클릭</b>으로 꼭짓점을 찍어 부지 외곽선 그리기<br>
+        <b>마지막 점을 첫 번째 점에 클릭</b>하거나 <b>더블클릭</b>으로 완성<br>
+        완성되면 모듈이 <b style="color:#3fb950">즉시 자동 배치</b>됨<br>
+        <span style="color:#f7c948">💡 먼저 오른쪽 패널 설정탭에서 모듈 규격·유형을 설정하세요</span><br>
+        <span style="color:#f7c948">💡 모바일: 탭(클릭)으로 꼭짓점 찍기, 더블탭으로 완성</span>
+      </div>
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-        <div style="background:#1c2230;border-radius:5px;padding:8px;border:1px solid rgba(255,119,0,.2);color:#dde4ed">
-          <div style="color:#ff7700;font-size:13px;font-weight:700;margin-bottom:3px">👆 클릭 = 꼭짓점 추가</div>
-          <div style="font-size:13px;color:#dde4ed">지도에서 차례로 클릭해 경계 꼭짓점을 추가합니다</div>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:8px;border:1px solid rgba(248,81,73,.2);color:#dde4ed">
-          <div style="color:#f7c948;font-size:13px;font-weight:700;margin-bottom:3px">✌ 더블클릭 = 마지막 꼭짓점 삭제</div>
-          <div style="font-size:13px;color:#dde4ed">더블클릭 시 <b style="color:#ff7b72">마지막 꼭짓점이 삭제</b>됩니다. 잘못 찍은 점 제거 시 활용.<br>완성은 <b style="color:#f7c948">첫 번째 꼭짓점(노란 점) 클릭</b>으로 합니다.</div>
-        </div>
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(232,140,0,.25);margin-bottom:8px">
+      <b style="color:#e88c00;font-size:14px">◈ 점 수정</b>
+      <div style="line-height:1.9;margin-top:4px">
+        기존 꼭짓점을 <b>드래그</b>해서 부지 형태 조정<br>
+        변의 <b>중간점 클릭</b>으로 새 꼭짓점 추가<br>
+        꼭짓점 <b>우클릭</b> 또는 <b>길게 탭</b>(모바일)으로 해당 점 삭제<br>
+        <span style="color:#f7c948">💡 점 수정 중에도 모듈이 실시간으로 재배치됩니다</span>
       </div>
-      <div style="background:#1c2230;border:1px solid rgba(247,201,72,.2);border-radius:6px;padding:10px;margin-bottom:8px;font-size:13px">
-        <b style="color:#f7c948">● 그리기 기능 요약</b>
-        <div style="color:#dde4ed;margin-top:5px;line-height:1.9">
-          ① <b style="color:#ff7700">그리기 버튼</b> 클릭 → 커서가 십자선(+)으로 변경<br>
-          ② 부지 꼭짓점을 <b style="color:#f0f6fc">차례로 클릭</b> (3개 이상)<br>
-          ③ <b style="color:#f7c948">첫 번째 꼭짓점(노란 점)</b> 클릭 → 부지 완성<br>
-          &nbsp;&nbsp;&nbsp;완성 시 <b style="color:#7ab8ff">경계 이격선(주황 점선)</b>이 나타남<br>
-          ④ 완성 즉시 모듈이 자동 배치되고 <b style="color:#f7c948">배치/회전 탭</b>으로 이동<br>
-          <span style="color:#f7c948">💡 더블클릭 = 마지막 꼭짓점 삭제 (실수 복구용)</span><br>
-          <span style="color:#f7c948">💡 지적도 레이어를 켜면 필지 경계를 정확히 따라 그릴 수 있습니다</span>
-        </div>
-      </div>
-      <div style="background:#1c2230;border:1px solid #30363d;border-radius:6px;padding:10px;margin-bottom:8px">
-        <div style="font-size:13px;color:#f7c948;font-weight:700;margin-bottom:5px">✙ 커서가 십자선(+) 으로 바뀝니다</div>
-        <svg viewBox="0 0 280 100" style="width:100%;height:80px;border-radius:4px;background:#1a2030">
-          <polygon points="40,15 210,18 220,85 35,80" fill="rgba(139,47,201,.12)" stroke="#8b2fc9" stroke-width="2" stroke-dasharray="5,3"/>
-          <circle cx="40" cy="15" r="6" fill="#f7c948"/><circle cx="210" cy="18" r="4" fill="#58a6ff"/>
-          <circle cx="220" cy="85" r="4" fill="#58a6ff"/><circle cx="35" cy="80" r="4" fill="#58a6ff"/>
-          <rect x="70" y="25" width="18" height="30" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="1" rx="1"/>
-          <rect x="91" y="25" width="18" height="30" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="1" rx="1"/>
-          <rect x="112" y="25" width="18" height="30" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="1" rx="1"/>
-          <rect x="133" y="25" width="18" height="30" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="1" rx="1"/>
-          <text x="240" y="50" fill="#dde4ed" font-size="8">← 클릭으로</text>
-          <text x="240" y="62" fill="#dde4ed" font-size="8">꼭짓점 추가</text>
-        </svg>
-      </div>
-      <div style="font-size:13px;color:#7ab8ff;padding-left:8px;border-left:2px solid #58a6ff;margin-top:4px">📐 완성 시 경계 이격선(주황 점선)이 표시되고, 이격 거리 안쪽에만 모듈이 배치됩니다</div>
     </div>
-  </div>`,
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.2)">
+      <b style="color:#58a6ff;font-size:14px">주소 검색</b>
+      <div style="line-height:1.9;margin-top:4px">
+        오른쪽 패널 → <b>주소 검색</b>으로 원하는 지역 이동<br>
+        또는 지도를 직접 드래그하여 부지 위치 찾기<br>
+        <span style="color:#f7c948">💡 위성+도로 또는 지적도 레이어로 전환하면 필지 경계 확인 가능</span>
+      </div>
+    </div>
+  </div>
+</div>`,
 
   edit:`<div style="border:1px solid rgba(232,140,0,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(232,140,0,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(232,140,0,.2)">
-      <div style="background:#e88c00;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">◈ 점수정</div>
-      <span style="font-size:15px;font-weight:700;color:#e88c00">경계 꼭짓점 정밀 조정</span>
+  <div style="background:rgba(232,140,0,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(232,140,0,.2)">
+    <div style="background:#e88c00;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">◈ 점수정</div>
+    <span style="font-size:15px;font-weight:700;color:#e88c00">꼭짓점 수정 / 추가 / 삭제</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(232,140,0,.25);margin-bottom:8px">
+      <b style="color:#e88c00">꼭짓점 드래그</b> — 부지 형태 직접 수정<br>
+      <b style="color:#e88c00">중간점 클릭</b> — 변의 가운데 점 클릭으로 꼭짓점 추가<br>
+      <b style="color:#e88c00">우클릭 / 길게탭</b> — 해당 꼭짓점 삭제 (최소 3개 유지)<br>
+      <span style="color:#f7c948">💡 수정 즉시 모듈이 재배치됩니다</span>
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
-        <div style="background:#1c2230;border-radius:5px;padding:7px 10px;border:1px solid rgba(232,140,0,.2);font-size:13px;color:#dde4ed">
-          <b style="color:#e88c00">드래그</b> <span style="color:#dde4ed">→ 꼭짓점 이동 (경계 모양 변경)</span>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:7px 10px;border:1px solid rgba(88,166,255,.2);font-size:13px;color:#dde4ed">
-          <b style="color:#58a6ff">변(선분) 클릭</b> <span style="color:#dde4ed">→ 해당 위치에 꼭짓점 추가</span>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:7px 10px;border:1px solid rgba(248,81,73,.2);font-size:13px;color:#dde4ed">
-          <b style="color:#f85149">우클릭</b> <span style="color:#dde4ed">→ 꼭짓점 삭제 (최소 3개 유지)</span>
-        </div>
-      </div>
-      <div style="font-size:13px;color:#f7c948;padding:6px 8px;background:rgba(247,201,72,.08);border-radius:4px">
-        💡 그리기 완료 후 정밀 조정이 필요할 때 사용. 경계 수정 시 모듈이 실시간 재배치됩니다.
-      </div>
+    <div style="background:#1c2230;border-radius:6px;padding:8px 10px;border:1px solid rgba(88,166,255,.2);font-size:12px;color:#8b949e">
+      점 수정 모드 진입: <b style="color:#e88c00">그리기 ▾</b> → <b>점 수정</b> 선택
     </div>
-  </div>`,
+  </div>
+</div>`,
 
   pan:`<div style="border:1px solid #444c56;border-radius:10px;overflow:hidden">
-    <div style="background:#1c2230;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d">
-      <div style="background:#8b949e;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✥ 이동</div>
-      <span style="font-size:15px;font-weight:700;color:#f0f6fc">지도 화면 이동</span>
+  <div style="background:#1c2230;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d">
+    <div style="background:#8b949e;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✥</div>
+    <span style="font-size:15px;font-weight:700;color:#8b949e">지도 이동 모드 (기본 모드)</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(139,148,158,.2);margin-bottom:8px">
+      <b>✥ 이동</b> 버튼 클릭 또는 <b>ESC</b>로 언제든지 복귀<br>
+      지도 드래그로 이동, 스크롤/핀치로 줌<br>
+      <b>다른 툴 사용 중</b>에도 지도 이동은 항상 가능
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
-        <div style="background:#1c2230;border-radius:5px;padding:8px 10px;font-size:13px;border:1px solid #30363d;color:#dde4ed">
-          <b style="color:#f0f6fc">드래그</b> <span style="color:#dde4ed">→ 지도 화면 이동 (커서: 손바닥 ✋)</span>
-        </div>
-        <div style="background:rgba(88,166,255,.08);border-radius:5px;padding:8px 10px;font-size:13px;border:1px solid rgba(88,166,255,.25);color:#dde4ed">
-          <b style="color:#58a6ff">⤢ 전체배치이동 사용 중 ✥ 이동 클릭</b>
-          <div style="color:#dde4ed;margin-top:3px">→ 지도를 움직여 원하는 위치 확인<br>→ 다시 ⤢ 전체배치이동 클릭하면 이동 모드 복귀<br>→ 모듈 패널은 계속 표시됩니다</div>
-        </div>
-      </div>
-      <div style="font-size:13px;color:#f7c948;padding:6px 8px;background:rgba(247,201,72,.08);border-radius:4px">
-        💡 이동 모드가 기본값입니다. 배치 작업을 마친 후 자동으로 돌아옵니다.
-      </div>
+    <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.2)">
+      <b style="color:#f7c948">전체화면 버튼</b> — 지도를 전체화면으로 확장<br>
+      <b style="color:#f7c948">현재 위치 버튼</b> — GPS로 현재 위치로 지도 이동<br>
+      <span style="color:#8b949e;font-size:12px">모바일에서 GPS 위치 요청 허용 시 사용 가능</span>
     </div>
-  </div>`,
+  </div>
+</div>`,
 
   del:`<div style="border:1px solid rgba(188,140,255,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(188,140,255,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(188,140,255,.2)">
-      <div style="background:#bc8cff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✂ 삭제</div>
-      <span style="font-size:15px;font-weight:700;color:#bc8cff">모듈 삭제</span>
+  <div style="background:rgba(188,140,255,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(188,140,255,.2)">
+    <div style="background:#bc8cff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✂ 삭제</div>
+    <span style="font-size:15px;font-weight:700;color:#bc8cff">모듈 삭제 도구</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(188,140,255,.25)">
+        <b style="color:#bc8cff">🗑 모듈 삭제</b><br>
+        클릭한 모듈 1장 삭제. 가장 세밀한 삭제 단위
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(188,140,255,.25)">
+        <b style="color:#bc8cff">▦ 스판 삭제</b><br>
+        클릭한 모듈이 속한 스판 전체 삭제<br>
+        BFS(인접 탐색)로 연결된 모듈 그룹을 자동 감지<br>
+        <span style="color:#f7c948">💡 메인 스판 또는 서브 스판 구분 없이 연결된 그룹 전체 삭제</span>
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(188,140,255,.25)">
+        <b style="color:#bc8cff">— 행 삭제</b><br>
+        클릭한 모듈과 같은 <b>행(가로줄)</b>의 모든 모듈 삭제<br>
+        로컬 좌표 기준으로 같은 Y 위치 모듈을 감지
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(188,140,255,.25)">
+        <b style="color:#bc8cff">| 열 삭제</b><br>
+        클릭한 모듈과 같은 <b>열(세로줄)</b>의 모든 모듈 삭제<br>
+        <b style="color:#3fb950">단축식(동서축)</b>: 같은 포스트 열(X 기준) 전체 삭제<br>
+        <b style="color:#3fb950">단축식(남북축)</b>: 같은 포스트 열(Y 기준) 전체 삭제<br>
+        <span style="color:#f7c948">💡 단축식에서 짧은 열 수동 삭제에 유용</span>
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(139,148,158,.2)">
+        <b style="color:#8b949e">↩ 실행취소</b><br>
+        마지막 삭제 작업을 되돌림 (여러 번 가능)
+      </div>
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-        <div style="background:#1c2230;border-radius:5px;padding:8px;border:1px solid rgba(188,140,255,.2);color:#dde4ed">
-          <div style="color:#bc8cff;font-size:13px;font-weight:700;margin-bottom:3px">👆 클릭 삭제</div>
-          <div style="font-size:13px;color:#dde4ed">모듈 하나씩 클릭해서 삭제</div>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:8px;border:1px solid rgba(188,140,255,.2);color:#dde4ed">
-          <div style="color:#bc8cff;font-size:13px;font-weight:700;margin-bottom:3px">⬚ 드래그 범위 삭제</div>
-          <div style="font-size:13px;color:#dde4ed">드래그로 범위 지정<br>범위 안 모듈 일괄 삭제</div>
-        </div>
-      </div>
-      <div style="background:#1c2230;border:1px solid rgba(248,81,73,.2);border-radius:5px;padding:8px 10px;margin-bottom:8px;font-size:13px">
-        <b style="color:#f85149">↩ 마지막 삭제 취소</b> <span style="color:#dde4ed">→ 패널 내 버튼으로 실수 복구</span>
-      </div>
-      <div style="font-size:13px;color:#f7c948;padding:6px 8px;background:rgba(247,201,72,.08);border-radius:4px">
-        💡 삭제 모드에서는 지도 드래그가 비활성화됩니다. 이동이 필요하면 ✥ 이동 버튼 클릭.
-      </div>
-    </div>
-  </div>`,
+  </div>
+</div>`,
 
   move:`<div style="border:1px solid rgba(88,166,255,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(88,166,255,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(88,166,255,.2)">
-      <div style="background:#58a6ff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">⤢ 모듈이동</div>
-      <span style="font-size:15px;font-weight:700;color:#58a6ff">모듈 위치 이동 — 3가지 방법</span>
+  <div style="background:rgba(88,166,255,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(88,166,255,.2)">
+    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">⤢ 이동</div>
+    <span style="font-size:15px;font-weight:700;color:#58a6ff">모듈 이동 도구</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(163,113,247,.35)">
+        <b style="color:#a371f7;font-size:14px">⤡ 확장 배치이동</b> <span style="font-size:11px;color:#8b949e">고정식 전용</span><br>
+        <div style="line-height:1.9;margin-top:4px">
+          메인 스판을 한쪽으로 민 후 드래그로 세밀 조정<br>
+          드래그 → <b style="color:#3fb950">✓ OK</b> 클릭 → 경계 밖 정리 + 서브 스판 자동 재배치<br>
+          <span style="color:#f7c948">💡 서브 스판 ON 상태에서 사용하면 빈 공간을 서브가 채웁니다</span><br>
+          <span style="color:#f85149">⚠ 단축식 동서축에서는 사용 불가</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25)">
+        <b style="color:#58a6ff;font-size:14px">🔲 전체 배치이동</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          모든 모듈을 한꺼번에 드래그로 이동<br>
+          드래그 → <b style="color:#3fb950">✓ OK</b> 클릭 → 경계 밖 자동 정리<br>
+          <span style="color:#f7c948">💡 전체 배치 위치를 미세 조정할 때 사용</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25)">
+        <b style="color:#3fb950;font-size:14px">📌 개별 모듈 이동</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          모듈 클릭으로 선택(노란 하이라이트) → 드래그로 이동<br>
+          여러 장 연속 선택 가능<br>
+          <b style="color:#3fb950">✓ 완료</b> 클릭 → 경계 밖 자동 정리<br>
+          <span style="color:#f7c948">💡 특정 위치의 모듈만 조정할 때 사용</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.35)">
+        <b style="color:#f7c948;font-size:14px">▦ 스판 이동</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          클릭한 모듈의 소속 스판을 BFS로 자동 감지 → 하이라이트<br>
+          드래그로 스판 전체 이동<br>
+          <b style="color:#3fb950">✓ 완료</b> 클릭 → 경계 밖 자동 정리<br>
+          <span style="color:#f7c948">💡 메인/서브 스판 구분 없이 연결된 그룹 전체를 한번에 이동</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:8px 10px;border:1px solid rgba(248,81,73,.2);font-size:12px">
+        <b style="color:#f85149">↺ 이동 전 배치로 리셋</b> — 이동 전 초기 배치로 복귀<br>
+        <b style="color:#f7c948">💡 이동 확정 후</b> — 간격/각도 변경 시 이동된 배치 유지 (의도적 설계)<br>
+        새 배치로 돌아가려면 초기화(✕) 후 재배치 필요
+      </div>
+
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-
-      <div style="background:#1c2230;border:1px solid rgba(163,113,247,.3);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="color:#a371f7;font-weight:700;font-size:14px;margin-bottom:5px">⤡ 확장 배치이동 (추천)</div>
-        <div style="font-size:13px;color:#dde4ed;line-height:1.8">
-          경계 밖까지 3배 확장된 그리드를 생성 후 드래그로 원하는 위치로 이동<br>
-          → <b style="color:#3fb950">✓ OK</b> 버튼 클릭 → 경계 밖 자동 정리<br>
-          <span style="color:#f7c948">💡 처음 배치 위치를 크게 바꾸고 싶을 때 사용하세요</span><br>
-          <span style="color:#f7c948">💡 OK 전에 ✥ 이동으로 지도 이동 후 다시 확장 배치이동 재사용 가능</span>
-        </div>
-        <svg viewBox="0 0 300 80" style="width:100%;height:65px;margin-top:8px;border-radius:4px;background:#1a2030">
-          <rect x="60" y="10" width="180" height="60" fill="none" stroke="#8b2fc9" stroke-width="1.5" stroke-dasharray="4,2"/>
-          <rect x="20" y="5" width="260" height="70" fill="none" stroke="rgba(163,113,247,.3)" stroke-width="1" stroke-dasharray="2,3"/>
-          <rect x="25" y="12" width="16" height="26" fill="rgba(163,113,247,.4)" stroke="#a371f7" stroke-width="0.8"/>
-          <rect x="44" y="12" width="16" height="26" fill="rgba(163,113,247,.4)" stroke="#a371f7" stroke-width="0.8"/>
-          <rect x="63" y="12" width="16" height="26" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="0.8"/>
-          <rect x="82" y="12" width="16" height="26" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="0.8"/>
-          <rect x="101" y="12" width="16" height="26" fill="rgba(63,185,80,.6)" stroke="#3fb950" stroke-width="0.8"/>
-          <text x="150" y="55" fill="#a371f7" font-size="8" text-anchor="middle">← 드래그로 이동 →</text>
-          <text x="40" y="72" fill="#dde4ed" font-size="7">경계 밖(반투명)</text>
-          <text x="100" y="72" fill="#3fb950" font-size="7">경계 안(유효)</text>
-        </svg>
-      </div>
-
-      <div style="background:#1c2230;border:1px solid rgba(88,166,255,.3);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="color:#58a6ff;font-weight:700;font-size:14px;margin-bottom:5px">🔲 전체 배치이동</div>
-        <div style="font-size:13px;color:#dde4ed;line-height:1.8">
-          현재 배치된 모듈 그대로 드래그로 위치 이동<br>
-          → <b style="color:#3fb950">✓ OK</b> 버튼 클릭 → 경계 밖 자동 정리<br>
-          <span style="color:#f7c948">💡 배치는 유지하고 전체 위치만 미세 조정할 때 사용</span><br>
-          <span style="color:#f7c948">💡 확장 배치이동과 번갈아 사용 가능 — 상태가 연동됩니다</span>
-        </div>
-      </div>
-
-      <div style="background:#1c2230;border:1px solid rgba(63,185,80,.3);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="color:#3fb950;font-weight:700;font-size:14px;margin-bottom:5px">📌 개별 모듈 이동</div>
-        <div style="font-size:13px;color:#dde4ed;line-height:1.8">
-          이동할 모듈을 클릭으로 선택(노란색) → OK → 드래그로 이동 → 완료<br>
-          여러 장 동시 선택 가능<br>
-          <span style="color:#f7c948">💡 특정 위치의 모듈만 조정하고 싶을 때 사용</span>
-        </div>
-      </div>
-
-      <div style="background:#1c2230;border:1px solid rgba(248,81,73,.2);border-radius:6px;padding:8px;font-size:13px">
-        <b style="color:#f85149">↺ 리셋</b> <span style="color:#dde4ed">→ 이동 전 초기 배치로 되돌리기</span><br>
-        <b style="color:#dde4ed;margin-top:4px;display:block">✥ 이동 모드로 전환해도 이동 상태가 유지됩니다 — 지도 스크롤 후 다시 이동 가능</b>
-      </div>
-    </div>
-  </div>`,
+  </div>
+</div>`,
 
   confirm:`<div style="border:1px solid rgba(63,185,80,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(63,185,80,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
-      <div style="background:#3fb950;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✓ / ★</div>
-      <span style="font-size:15px;font-weight:700;color:#3fb950">부지 확정 & 전체 완성</span>
+  <div style="background:rgba(63,185,80,.12);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">✓ 확정</div>
+    <span style="font-size:15px;font-weight:700;color:#3fb950">부지 확정 & 전체 완성</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25)">
+        <b style="color:#3fb950;font-size:14px">✓ 확정</b><br>
+        현재 부지 + 모듈 배치를 부지목록에 저장<br>
+        확정 후 새 부지를 추가로 그릴 수 있음<br>
+        확정된 부지는 <b>부지목록 탭</b>에서 이름 수정 / 재편집 / 삭제 가능<br>
+        <span style="color:#f7c948">💡 여러 부지를 순서대로 확정 → 합산 결과 확인 가능</span>
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25)">
+        <b style="color:#58a6ff;font-size:14px">★ 전체 완성 → 보고서</b><br>
+        모든 부지 확정 완료 후 클릭<br>
+        보고서 탭으로 이동 → 🖨 인쇄 / PDF 저장<br>
+        부지 2개 이상이면 부지명 최종 확인 창 표시<br>
+        <span style="color:#f7c948">💡 지도 외곽선 더블클릭으로 해당 부지 삭제 가능</span>
+      </div>
     </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25);color:#dde4ed">
-          <div style="color:#3fb950;font-weight:700;font-size:14px;margin-bottom:4px">✓ 확정</div>
-          <div style="font-size:13px;color:#dde4ed">현재 부지+모듈 배치를 고정합니다.<br>확정 후 새 부지를 추가로 그릴 수 있습니다.<br>확정된 부지는 부지 목록 탭에서 수정/삭제 가능.</div>
-        </div>
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25);color:#dde4ed">
-          <div style="color:#58a6ff;font-weight:700;font-size:14px;margin-bottom:4px">★ 완성 → 보고서</div>
-          <div style="font-size:13px;color:#dde4ed">모든 부지 완료 후 클릭.<br>보고서 탭으로 이동 → 🖨 인쇄 / 📥 CSV 내보내기.<br>📷 참고 사진 첨부 가능 (썸네일 드래그로 순서 변경).</div>
+  </div>
+</div>`,
+
+  rotation:`<div style="border:1px solid rgba(247,201,72,.3);border-radius:10px;overflow:hidden">
+  <div style="background:rgba(247,201,72,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(247,201,72,.2)">
+    <div style="background:#f7c948;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">⟳ 배치·회전</div>
+    <span style="font-size:15px;font-weight:700;color:#f7c948">배치/회전 패널 — 오른쪽 패널 2번째 탭</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25)">
+        <b style="color:#f7c948;font-size:14px">✦ 자동배치 (핵심!)</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          클릭 한 번으로 0°~180° 전 각도 탐색 → 최적 각도 자동 선택<br>
+          <b>PVGIS 연결 시</b>: 실제 일사량 기반 발전량 최적화<br>
+          <b>PVGIS 미연결</b>: 남향 기준 모듈 수 최대화<br>
+          <b>단축식/양축식</b>: 모듈 수 최대화 + 열당 최소 장수 조건 동시 적용<br>
+          <span style="color:#f7c948">💡 툴바의 ✦ 자동배치 버튼과 동일</span>
         </div>
       </div>
-      <div style="font-size:13px;color:#f7c948;padding:6px 8px;background:rgba(247,201,72,.08);border-radius:4px">
-        💡 부지 외곽선 더블클릭 → 해당 부지 삭제 가능
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.2)">
+        <b style="color:#f7c948;font-size:14px">⟳ 배치 회전 슬라이더</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          슬라이더 드래그 또는 각도 직접 입력으로 수동 조정<br>
+          0° = 남향 / 90° = 서향 / 180° = 북향<br>
+          <b>단축식 동서축</b>: 선택 시 자동으로 0° 설정<br>
+          <b>단축식 남북축</b>: 선택 시 자동으로 90° 설정
+        </div>
       </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25)">
+        <b style="color:#58a6ff;font-size:14px">NS / EW 간격</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>NS (남북 간격)</b> — 행 사이 간격 mm<br>
+          <b>EW (동서 간격)</b> — 열 사이 간격 mm<br>
+          <span style="color:#f7c948">💡 간격 변경 즉시 배치 재계산 (이동 확정 전 상태에서만)</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(163,113,247,.25)">
+        <b style="color:#a371f7;font-size:14px">■ 고정식 스판 설정</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>메인 스판 열×행</b> — 스판 한 개의 모듈 수 (예: 6열×2행=12장)<br>
+          <b>■ 확장 배치</b> 체크 — 메인 스판을 경계 한쪽으로 밀기<br>
+          <b>서브 스판 ON</b> — 빈 공간에 작은 스판 자동 배치<br>
+          <b>서브 스판 열×행</b> — 서브 스판 크기 설정<br>
+          <span style="color:#f7c948">💡 확장배치 + 서브스판 동시: 메인 이동 후 남은 공간에 서브 자동 배치</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.2)">
+        <b style="color:#3fb950;font-size:14px">단축식 전용 설정</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>↔ 동서축 / ↕ 남북축</b> — 추적기 방향 선택<br>
+          <b>열당 장수</b> — 포스트 1개당 연결 모듈 수<br>
+          <b>포스트 간격</b> — 포스트 중심간 거리 mm<br>
+          <b style="color:#f85149">열당 최소 장수</b> — 이 수치 미만의 짧은 열 자동 삭제 (0=사용안함)<br>
+          <b style="color:#58a6ff">🔧 이격 힌트</b> — 추적각 ±45° 기준 최소/권장 포스트간 거리 표시<br>
+          <span style="color:#f7c948">💡 짧은 열 삭제로 설치 단가 불균형 방지</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.15)">
+        <b style="color:#58a6ff;font-size:14px">↺ 동서방향 확인</b><br>
+        현재 각도에서 +90° 미리보기 → 다시 클릭하면 원래 각도 복귀<br>
+        단축식 방향 확인 시 활용
+      </div>
+
     </div>
-  </div>`,
+  </div>
+</div>`,
+
+  zonelist:`<div style="border:1px solid rgba(88,166,255,.3);border-radius:10px;overflow:hidden">
+  <div style="background:rgba(88,166,255,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(88,166,255,.2)">
+    <div style="background:#58a6ff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">📦</div>
+    <span style="font-size:15px;font-weight:700;color:#58a6ff">부지목록 패널 — 오른쪽 패널 3번째 탭</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25)">
+        <b style="color:#58a6ff;font-size:14px">📦 확정된 부지 목록</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          ✓ 확정 후 이 탭에 부지 카드로 표시<br>
+          각 카드: 부지명 / 유형 / 모듈 수 / 용량 / 면적 / 경계이격 확인<br>
+          하단에 <b>전체 합산</b> (총 모듈수 / 총 용량 / 총 발전량) 표시
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25)">
+        <b style="color:#f7c948;font-size:14px">✏ 부지명 직접 입력</b><br>
+        각 부지 카드의 이름 입력란에서 직접 수정<br>
+        예: "본관 지붕", "창고 1호", "농지 A구역"<br>
+        <span style="color:#f7c948">💡 부지명은 보고서에 그대로 출력됩니다</span>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(232,140,0,.25)">
+        <b style="color:#e88c00;font-size:14px">✏ 수정 / 🗑 삭제</b><br>
+        각 부지 카드 버튼으로 수정 모드 재진입 또는 삭제<br>
+        지도에서 <b>부지 외곽선 더블클릭</b>으로도 삭제 가능
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25)">
+        <b style="color:#3fb950;font-size:14px">★ 전체 완성 → 보고서</b><br>
+        모든 부지 확정 완료 후 클릭<br>
+        부지 2개 이상이면 부지명 최종 확인 창 표시<br>
+        <span style="color:#f7c948">💡 각 부지 다른 설치 유형 가능 (지붕+노지 혼합 현장 지원)</span>
+      </div>
+
+    </div>
+  </div>
+</div>`,
+
+  report:`<div style="border:1px solid rgba(63,185,80,.3);border-radius:10px;overflow:hidden">
+  <div style="background:rgba(63,185,80,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
+    <div style="background:#3fb950;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">📄</div>
+    <span style="font-size:15px;font-weight:700;color:#3fb950">보고서 패널 — 오른쪽 패널 4번째 탭</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25)">
+        <b style="color:#3fb950;font-size:14px">🖨 보고서 인쇄 / PDF 저장</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>PC</b>: 새 창에서 보고서 열림 → Ctrl+P 인쇄 또는 PDF 저장<br>
+          <b>모바일 / 홈화면앱</b>: 화면 위에 보고서 오버레이 표시<br>
+          <span style="padding-left:10px">→ <b>🖨 인쇄/PDF</b> 버튼 탭 → 브라우저 인쇄 화면</span><br>
+          <b style="color:#58a6ff">iPhone PDF 저장 방법</b>:<br>
+          <span style="padding-left:10px">인쇄 화면에서 <b>핀치 아웃(두 손가락 벌리기)</b></span><br>
+          <span style="padding-left:10px">→ 상단 공유 버튼(□↑) → <b>PDF 저장</b> 선택</span><br>
+          <b style="color:#3fb950">✕ 닫기</b> 버튼으로 보고서 오버레이 닫기
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25)">
+        <b style="color:#58a6ff;font-size:14px">📷 현장 사진 첨부</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          사진 선택 버튼 → 여러 장 동시 선택 가능<br>
+          <b>첫 번째 사진 = 메인사진</b> (보고서에 크게 표시)<br>
+          <b>나머지 = 참고사진</b> (보고서 하단 2열 그리드)<br>
+          썸네일 드래그로 순서 변경 → 첫 번째가 메인사진<br>
+          <span style="color:#f7c948">💡 사진 첨부 시 자동생성 배치현황 이미지는 숨김</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25)">
+        <b style="color:#f7c948;font-size:14px">💰 견적 계산</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>활성화</b> 버튼 클릭 후 단가 입력:<br>
+          고정식 / 단축식 / 양축식 별도 단가 설정 가능<br>
+          부가세 % 입력 시 자동 계산<br>
+          <b>수익 시뮬레이터</b>: SMP·REC 단가 입력 시 연도별 수익 자동 계산<br>
+          <span style="color:#f7c948">💡 견적 결과는 보고서에 자동 포함</span>
+        </div>
+      </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(139,148,158,.2)">
+        <b style="color:#8b949e;font-size:14px">💾 저장 · 불러오기</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>저장 ▾</b> 버튼 → JSON 파일로 저장<br>
+          <b>다른 이름으로 저장</b> → 현장명 입력 후 저장<br>
+          <b>불러오기</b> → 저장된 JSON 파일 선택<br>
+          저장 데이터: 부지 좌표 / 모듈 배치 / 설정값 / 부지명 / 현장명 전부 포함<br>
+          <span style="color:#f7c948">💡 PC에서 저장 → 모바일에서 불러오기 가능 (호환)</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>`,
 
   map:`<div style="border:1px solid #444c56;border-radius:10px;overflow:hidden">
-    <div style="background:#1c2230;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d">
-      <span style="font-size:14px">🗺</span>
-      <span style="font-size:15px;font-weight:700;color:#f0f6fc">지도 레이어 & 지적도 비율 고정</span>
-    </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:13px">
-        <div style="background:#1c2230;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;color:#dde4ed"><span style="color:#f0f6fc">🛰 위성+도로</span><span style="color:#3fb950">기본값</span></div>
-        <div style="background:#1c2230;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;color:#dde4ed"><span style="color:#f0f6fc">🛰 위성</span><span style="color:#dde4ed">도로 없음</span></div>
-        <div style="background:#1c2230;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;color:#dde4ed"><span style="color:#f0f6fc">🏔 지형도</span><span style="color:#dde4ed">카카오 등고선</span></div>
-        <div style="background:#1c2230;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;color:#dde4ed"><span style="color:#f0f6fc">📋 지적도</span><span style="color:#f7c948">필지 경계 확인</span></div>
+  <div style="background:#1c2230;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d">
+    <span style="font-size:14px">🗺</span>
+    <span style="font-size:15px;font-weight:700;color:#f0f6fc">지도 레이어 & 기타 설정</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
 
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.2)">
+        <b style="color:#58a6ff;font-size:14px">지도 유형 전환</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>🛰 위성+도로</b> — 기본값. 위성사진에 도로 오버레이<br>
+          <b>🛰 위성</b> — 도로 없는 순수 위성사진<br>
+          <b>🗺 일반지도</b> — 일반 지도 (구글 기본)<br>
+          <b>🏔 지형도</b> — 등고선 포함 지형도 (카카오)<br>
+          <b>📋 지적도</b> — 필지 경계선 표시 (카카오)<br>
+          <span style="color:#f7c948">💡 모바일: 화면 왼쪽 레이어 버튼 또는 ··· 메뉴에서 전환</span>
+        </div>
       </div>
-      <div style="background:#1c2230;border:1px solid rgba(247,201,72,.3);border-radius:6px;padding:10px;margin-bottom:8px">
-        <div style="color:#f7c948;font-weight:700;font-size:13px;margin-bottom:5px">🔒 지적도 비율 고정 사용법</div>
-        <div style="font-size:13px;color:#dde4ed;line-height:1.8">
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.3)">
+        <b style="color:#f7c948;font-size:14px">🔒 지적도 비율 고정</b><br>
+        <div style="line-height:1.9;margin-top:4px">
           ① 📋 지적도 클릭<br>
-          ② 🔒 비율 고정 OFF 클릭 → ON (현재 줌 레벨 저장)<br>
+          ② 🔒 비율 고정 OFF → ON (현재 줌 레벨 저장)<br>
           ③ 다른 지도(위성 등) 전환 가능 → 비율 상태 유지<br>
-          ④ 다시 📋 지적도 클릭 → 저장된 레벨로 자동 복원<br>
+          ④ 📋 지적도 재클릭 → 저장된 레벨로 자동 복원<br>
           <span style="color:#f85149">⚠ 빨간 버튼 = 줌 레벨 불일치 감지됨</span>
         </div>
       </div>
+
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.2)">
+        <b style="color:#3fb950;font-size:14px">지역 · 발전량 설정</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>설치 지역</b> — 지역별 일사량 기준값 선택<br>
+          <b>PVGIS 자동수신</b> — 인터넷 연결 시 해당 좌표의 실제 일사량 데이터 자동 수신<br>
+          수신 성공 시 하단에 연간 발전량이 실제 데이터 기반으로 표시<br>
+          <b>방위각</b> — 0°=남향, -90°=동향, +90°=서향
+        </div>
+      </div>
+
     </div>
-  </div>`,
+  </div>
+</div>`,
 
   photo:`<div style="border:1px solid rgba(63,185,80,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(63,185,80,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
-      <span style="font-size:14px">📷</span>
-      <span style="font-size:15px;font-weight:700;color:#3fb950">참고 사진 첨부 & 보고서</span>
-    </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:13px">
-        <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid rgba(247,201,72,.2);color:#dde4ed">
-          <b style="color:#f7c948">첫 번째 사진 = 메인사진</b>
-          <div style="color:#dde4ed;margin-top:2px">보고서에서 배치도 바로 아래 큰 사진으로 표시</div>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid #30363d;color:#dde4ed">
-          <b style="color:#f0f6fc">나머지 사진 = 참고사진</b>
-          <div style="color:#dde4ed;margin-top:2px">보고서 하단 2열 그리드로 표시</div>
-        </div>
-        <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid rgba(88,166,255,.2);color:#dde4ed">
-          <b style="color:#58a6ff">↕ 드래그로 순서 변경</b>
-          <div style="color:#dde4ed;margin-top:2px">썸네일 드래그 → 순서 변경 → 첫 번째가 메인사진</div>
+  <div style="background:rgba(63,185,80,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
+    <span style="font-size:14px">📷</span>
+    <span style="font-size:15px;font-weight:700;color:#3fb950">참고 사진 첨부 & 보고서 출력</span>
+  </div>
+  <div style="background:#0d1117;padding:12px 14px;font-size:13px;color:#dde4ed">
+    <div style="display:flex;flex-direction:column;gap:7px">
+
+      <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid rgba(247,201,72,.2)">
+        <b style="color:#f7c948">첫 번째 사진 = 메인사진</b><br>
+        보고서에서 배치도 아래 큰 사진으로 표시
+      </div>
+      <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid #30363d">
+        <b style="color:#f0f6fc">나머지 사진 = 참고사진</b><br>
+        보고서 하단 2열 그리드로 표시
+      </div>
+      <div style="background:#1c2230;border-radius:5px;padding:8px 10px;border:1px solid rgba(88,166,255,.2)">
+        <b style="color:#58a6ff">↕ 드래그로 순서 변경</b><br>
+        썸네일 드래그 → 순서 변경 → 첫 번째가 메인사진<br>
+        여러 장 동시 선택 가능 (복수 선택)<br>
+        <span style="color:#f7c948">💡 사진 첨부 시 자동생성 배치현황 이미지는 표시되지 않습니다</span>
+      </div>
+      <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.2)">
+        <b style="color:#3fb950;font-size:14px">🖨 보고서 인쇄 / PDF 저장</b><br>
+        <div style="line-height:1.9;margin-top:4px">
+          <b>PC</b>: 새 창에서 보고서 열림 → Ctrl+P<br>
+          <b>모바일/홈화면앱</b>: 화면 위 오버레이로 표시<br>
+          → <b>🖨 인쇄/PDF</b> 탭 → 브라우저 인쇄 화면<br>
+          <b style="color:#58a6ff">iPhone PDF</b>: 인쇄 화면에서 핀치 아웃 → 공유 → PDF 저장<br>
+          <b style="color:#3fb950">✕ 닫기</b>로 오버레이 닫기
         </div>
       </div>
-      <div style="font-size:13px;color:#f7c948;padding:6px 8px;background:rgba(247,201,72,.08);border-radius:4px">
-        💡 보고서 탭 → ★ 완성 후 → 📷 참고 사진 첨부 버튼
-      </div>
+
     </div>
-  </div>`,
-
-  rotation:`<div style="border:1px solid rgba(247,201,72,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(247,201,72,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(247,201,72,.2)">
-      <div style="background:#f7c948;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">⟳ 배치·회전</div>
-      <span style="font-size:15px;font-weight:700;color:#f7c948">배치/회전 패널 — 오른쪽 패널 2번째 탭</span>
-    </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:#dde4ed">
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25);color:#dde4ed">
-          <b style="color:#f7c948;font-size:14px">⟳ 배치 회전 슬라이더</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            슬라이더를 좌우로 드래그하거나 방향 버튼 클릭:<br>
-            • <b style="color:#f0f6fc">↓ 남향 (0°)</b> — 일반적인 남향 설치에 최적<br>
-            • <b style="color:#f0f6fc">↑ 북향 (±180°)</b> — 북향 경사면용<br>
-            • <b style="color:#f0f6fc">→ 동향 (90°)</b> / <b style="color:#f0f6fc">← 서향 (-90°)</b><br>
-            • <b style="color:#f0f6fc">직접 입력</b>: 각도 값 입력 후 Enter 또는 적용 버튼<br>
-            <span style="color:#f7c948">💡 슬라이더 조정 즉시 모듈 배치가 실시간 갱신됩니다</span>
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25);color:#dde4ed">
-          <b style="color:#58a6ff;font-size:14px">↺ 동서 방향 확인</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            현재 각도에서 <b style="color:#f0f6fc">+90° 회전 미리보기</b><br>
-            단축식 설치 시 패널 방향 확인에 활용<br>
-            다시 클릭하면 원래 각도로 자동 복귀
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(57,211,83,.25);color:#dde4ed">
-          <b style="color:#39d353;font-size:14px">⚡ 빠른 방향 전환</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            방향 버튼 한 번으로 즉시 회전 + <b style="color:#f0f6fc">경계 밖 모듈 자동 정리</b><br>
-            회전 후 부지 밖으로 나간 모듈을 자동 제거
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(188,140,255,.25);color:#dde4ed">
-          <b style="color:#bc8cff;font-size:14px">✂ 모듈 삭제 (이 탭에서)</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            <b style="color:#f0f6fc">삭제 모드 켜기</b> 버튼 → 지도에서 모듈 클릭 또는 드래그 범위로 삭제<br>
-            <b style="color:#f0f6fc">↩ 마지막 삭제 취소</b> — 실수로 지운 모듈 복구<br>
-            <span style="color:#f7c948">💡 툴바의 ✂ 삭제 버튼과 동일합니다</span>
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25);color:#dde4ed">
-          <b style="color:#3fb950;font-size:14px">✓ 부지 확정 (이 탭에서)</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            배치 완료 후 <b style="color:#3fb950">✓ 이 부지 확정</b> 버튼 클릭 → 현재 부지+모듈 고정<br>
-            <b style="color:#58a6ff">★ 전체 완성 → 보고서</b> — 모든 부지 완료 후 클릭
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.15);color:#dde4ed">
-          <b style="color:#dde4ed;font-size:14px">⤢ 모듈 이동 (이 탭에서)</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            툴바 <b style="color:#58a6ff">⤢ 모듈이동 ▾</b> 클릭 → 서브메뉴에서 이동 방식 선택<br>
-            <b style="color:#3fb950">✂ 경계 밖 모듈 정리</b> — 부지 경계 바깥으로 나간 모듈 일괄 제거
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>`,
-
-  zonelist:`<div style="border:1px solid rgba(88,166,255,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(88,166,255,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(88,166,255,.2)">
-      <div style="background:#58a6ff;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">📦</div>
-      <span style="font-size:15px;font-weight:700;color:#58a6ff">부지목록 패널 — 오른쪽 패널 3번째 탭</span>
-    </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:#dde4ed">
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25);color:#dde4ed">
-          <b style="color:#58a6ff;font-size:14px">📦 확정된 부지 목록</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            <b style="color:#3fb950">✓ 확정</b> 후 이 탭에 부지가 목록으로 표시됩니다<br>
-            각 부지 카드에서 확인 가능한 정보:<br>
-            • 부지 번호 / 모듈 수량 / 설치 용량(kW)<br>
-            • 설치 유형 (평판식 / 인삼밭식 / 고정식 / 단축식)<br>
-            • 경계 이격 거리 (mm)
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25);color:#dde4ed">
-          <b style="color:#f7c948;font-size:14px">✏ 부지명 직접 입력</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            각 부지 카드의 이름 입력란에서 직접 수정 가능<br>
-            예: "본관 지붕", "창고 1호", "농지 A구역"<br>
-            <span style="color:#f7c948">💡 부지명은 보고서에 그대로 출력됩니다</span><br>
-            <span style="color:#f7c948">💡 부지가 1개이면 현장명이 자동으로 부지명으로 사용됩니다</span>
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(232,140,0,.25);color:#dde4ed">
-          <b style="color:#e88c00;font-size:14px">✏ 부지 수정 / 🗑 삭제</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            각 부지 카드의 버튼으로 수정 모드 재진입 또는 삭제<br>
-            <b style="color:#f0f6fc">지도에서 부지 외곽선 더블클릭</b>으로도 삭제 가능
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25);color:#dde4ed">
-          <b style="color:#3fb950;font-size:14px">★ 전체 완성 → 보고서</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            모든 부지 확정 완료 후 이 버튼 클릭<br>
-            부지가 2개 이상이면 부지명 최종 확인 창이 표시됩니다
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>`,
-
-  report:`<div style="border:1px solid rgba(63,185,80,.3);border-radius:10px;overflow:hidden">
-    <div style="background:rgba(63,185,80,.1);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(63,185,80,.2)">
-      <div style="background:#3fb950;color:#000;font-weight:900;font-size:15px;border-radius:5px;padding:3px 8px">📄</div>
-      <span style="font-size:15px;font-weight:700;color:#3fb950">보고서 패널 — 오른쪽 패널 4번째 탭</span>
-    </div>
-    <div style="background:#0d1117;padding:12px 14px">
-      <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:#dde4ed">
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.25);color:#dde4ed">
-          <b style="color:#f7c948;font-size:14px">★ 완성 버튼 클릭 후 활성화</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            <b style="color:#58a6ff">★ 완성</b> 버튼(툴바 또는 패널)을 클릭하면 보고서 탭이 자동으로 열립니다<br>
-            현장명·주소, 부지별 배치 결과, 전체 합계가 자동으로 채워집니다
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.25);color:#dde4ed">
-          <b style="color:#58a6ff;font-size:14px">보고서에 표시되는 항목</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            • <b style="color:#f0f6fc">현장 정보</b>: 현장명, 주소<br>
-            • <b style="color:#f0f6fc">부지별 배치 결과</b>: 부지명, 모듈 수, 용량, 이격거리<br>
-            • <b style="color:#f0f6fc">전체 합계</b>: 총 모듈 수, 총 설비 용량(kW), 설치 면적(m²), 예상 연간 발전량(MWh/년)<br>
-            • <b style="color:#f0f6fc">배치 현황 이미지</b>: ★ 완성 시 자동 생성 (사진 미첨부 시)<br>
-            • <b style="color:#3fb950">첨부 사진</b>: 메인사진 + 참고사진 (사용자가 직접 첨부)
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(63,185,80,.25);color:#dde4ed">
-          <b style="color:#3fb950;font-size:14px">🖨 보고서 인쇄</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            새 창에서 인쇄 미리보기 자동 실행<br>
-            PDF로 저장하려면 인쇄 대화상자에서 <b style="color:#f0f6fc">"PDF로 저장"</b> 선택<br>
-            <span style="color:#f85149">⚠ 팝업 차단 시 브라우저 팝업 허용 후 재시도</span>
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(88,166,255,.15);color:#dde4ed">
-          <b style="color:#dde4ed;font-size:14px">📥 CSV 내보내기</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            부지별 데이터를 CSV 파일로 다운로드<br>
-            엑셀에서 바로 열 수 있는 형식으로 저장됩니다<br>
-            포함 항목: 부지명, 유형, 모듈수량, 용량(kW), 면적(m²)
-          </div>
-        </div>
-
-        <div style="background:#1c2230;border-radius:6px;padding:10px;border:1px solid rgba(247,201,72,.2);color:#dde4ed">
-          <b style="color:#f7c948;font-size:14px">📷 참고 사진 첨부</b>
-          <div style="color:#dde4ed;margin-top:4px;line-height:1.8">
-            <b style="color:#3fb950">★ 완성</b> 후 보고서 탭 하단에 사진 첨부 버튼 표시<br>
-            여러 장 동시 선택 가능 (복수 선택)<br>
-            첫 번째 사진 = <b style="color:#f7c948">메인사진</b> (배치도 아래 큰 사진)<br>
-            나머지 = <b style="color:#f0f6fc">참고사진</b> (2열 그리드)<br>
-            썸네일 드래그로 순서 변경 가능<br>
-            <span style="color:#f7c948">💡 사진 첨부 시 자동생성 배치현황 이미지는 표시되지 않습니다</span>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>`
+  </div>
+</div>`
 };
 
 window.showManualTool=function(key){
