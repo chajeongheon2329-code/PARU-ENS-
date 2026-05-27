@@ -718,8 +718,8 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
           <tr><td>주소</td><td id="raddr">-</td></tr>
         </table>
         <table class="rt" id="rzone-table">
-          <tr><th colspan="5">부지별 배치 결과</th></tr>
-          <tr><th>부지</th><th>모듈</th><th>용량</th><th>예상 발전량</th><th>이격(mm)</th></tr>
+          <tr><th colspan="6">부지별 배치 결과</th></tr>
+          <tr><th>부지</th><th>모듈</th><th>용량</th><th>경사/방위</th><th>예상 발전량</th><th>이격</th></tr>
         </table>
         <table class="rt"><tr><th colspan="2">전체 합계</th></tr>
           <tr class="hl"><td>총 모듈 수량</td><td id="rcnt">-</td></tr>
@@ -3103,11 +3103,9 @@ function fillRpt(){
     if(_pvgisGen&&_pvgisGen>0){_gs.textContent='🌐 실측 '+_pvgisGen+' kWh/kWp·년 (Open-Meteo ERA5)';_gs.style.color='var(--green)';} else {var _rk=(document.getElementById('sregion')||{}).value||'jeonnam';_gs.textContent='📊 지역 평균 ('+(_REGION_LABEL[_rk]||_rk)+', '+(_REGION_GEN[_rk]||1050)+' kWh/kWp·년)';_gs.style.color='var(--text3)';}
   }
   var tbl=document.getElementById('rzone-table');
+  /* rows[0]=colspan 헤더, rows[1]=컬럼명 헤더, rows[2~]=데이터 → 2행부터 삭제 */
   while(tbl.rows.length>2)tbl.deleteRow(2);
   var tm={'rf':'평판식','rg':'인삼밭식','fs':'고정식','fe':'단축식','fd':'양축식'};
-  /* 헤더 갱신 */
-  var hdr=tbl.rows[1];
-  if(hdr)hdr.innerHTML='<th>부지</th><th>모듈</th><th>용량</th><th>경사각/방위</th><th>예상 발전량</th><th>이격(mm)</th>';
   zones.forEach(function(z,i){
     var tr=tbl.insertRow();
     var zn=z.name||('부지 '+(i+1));
@@ -3116,8 +3114,11 @@ function fillRpt(){
     var tiltV=(z.tilt!==undefined?z.tilt:0);
     var azV=(z.rotA!==undefined?z.rotA:0);
     var _isFixed=(z.iType==='rf'||z.iType==='rg'||z.iType==='fs');
-    var tiltStr=_isFixed?(tiltV+'°경사/'+azV+'°방위'):'추적식';
-    tr.innerHTML='<td>'+zn+'<br><small style="color:#888">'+tm[z.iType]+'</small></td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td style="font-size:10px">'+tiltStr+'</td><td>'+zAnn+' MWh/년</td><td>'+(z.borderOff||0)+'</td>';
+    var tiltStr=_isFixed?(tiltV+'°/'+azV+'°'):'추적식';
+    tr.innerHTML='<td>'+zn+'<br><small style="color:var(--text3)">'+tm[z.iType]+'</small></td>'
+      +'<td>'+z.cnt+'장</td><td>'+z.kw+' kW</td>'
+      +'<td style="font-size:10px;color:var(--text2)">'+tiltStr+'</td>'
+      +'<td>'+zAnn+' MWh/년</td><td>'+(z.borderOff||0)+'</td>';
   });
 }
 
@@ -3144,12 +3145,14 @@ function doPrint(){
   w.document.write('<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,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" style="height:40px;width:auto" alt="PARU ENS"><div class="logo">☀ SOLARDESIGN</div></div><div style="font-size:14px;font-weight:700;color:#1a5276">태양광 설치 계획서</div></div>');
   w.document.write('<p style="font-size:10px;color:#777;margin-bottom:5px">작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+'</p>');
   w.document.write('<h2>현장 정보</h2><table><tr><td>현장명</td><td>'+(document.getElementById('sname').value||'미입력')+'</td></tr><tr><td>현장 주소</td><td>'+(document.getElementById('saddr').value||'미입력')+'</td></tr></table>');
-  w.document.write('<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>예상 발전량</th><th>면적(m²)</th><th>경계이격(mm)</th></tr>');
+  w.document.write('<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>경사각/방위</th><th>예상 발전량</th><th>면적(m²)</th><th>경계이격(mm)</th></tr>');
   zones.forEach(function(z,i){
     var _zn=z.name||('부지 '+(i+1));
     var _zGen=_getGenByType(z.iType||'rf', z.tilt, z.rotA);
     var _zAnn=(parseFloat(z.kw||0)*_zGen/1000).toFixed(2);
-    w.document.write('<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td class="gen">'+_zAnn+' MWh/년</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>');
+    var _isFixed=(z.iType==='rf'||z.iType==='rg'||z.iType==='fs');
+    var _tiltStr=_isFixed?((z.tilt||0)+'°경사/'+(z.rotA||0)+'°방위'):'추적식';
+    w.document.write('<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td>'+_tiltStr+'</td><td class="gen">'+_zAnn+' MWh/년</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>');
   });
   w.document.write('</table><h2>전체 합계</h2><table><tr class="hl"><td>총 모듈 수량</td><td>'+totalCnt+' 장</td></tr><tr class="hl"><td>총 설비 용량</td><td>'+totalKw.toFixed(2)+' kW</td></tr><tr><td>설치 면적</td><td>'+totalArea.toFixed(1)+' m²</td></tr><tr><td>예상 연간 발전량</td><td>'+ann+' MWh/년</td></tr></table>');
   /* ── 견적 계산 (활성화된 경우) — 유형별 단가 적용 ── */
@@ -6021,7 +6024,7 @@ window._doSvWithName=function(nm,directDownload){
   if(zones.length&&!isFinished){
     if(!confirmedSVGImg)confirmedSVGImg=svgToDataUrl(buildPrintSVG());
     fillRpt();isFinished=true;
-    goTab(3);
+    /* 탭 강제 이동 제거 — 현재 탭 유지, UI 충돌 방지 */
   }
   /* 2. 현재 mod-tilt, mod-azimuth UI 값 */
   function _gv2(id,def){var el=document.getElementById(id);return el?(parseFloat(el.value)||def||0):def||0;}
