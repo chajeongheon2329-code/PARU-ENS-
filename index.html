@@ -3657,14 +3657,14 @@ function _doPrintOverlay(){
       setTimeout(function(){
         var idoc=ifr.contentDocument||ifr.contentWindow.document;
         var iBody=idoc.body;
-        var fullH=Math.max(iBody.scrollHeight,iBody.offsetHeight,3000);
+        var fullH=Math.max(iBody.scrollHeight,iBody.offsetHeight);
         ifr.style.height=fullH+'px';
         /* 배경색 강제 흰색 */
         iBody.style.background='#fff';
         iBody.style.color='#1a1a2e';
         setTimeout(function(){
           html2canvas(iBody,{
-            scale:2,
+            scale:2.5,
             useCORS:true,
             allowTaint:true,
             backgroundColor:'#ffffff',
@@ -3682,27 +3682,26 @@ function _doPrintOverlay(){
             var pdf=new _jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
             var A4W=pdf.internal.pageSize.getWidth();  /* 210mm */
             var A4H=pdf.internal.pageSize.getHeight(); /* 297mm */
-            var marg=8; /* 여백 mm */
-            var pw=A4W-marg*2;  /* 인쇄 영역 너비: 194mm */
-            var ph=A4H-marg*2;  /* 인쇄 영역 높이: 281mm */
-            /* canvas는 scale:2이므로 실제 논리 px = canvas.width/2 = 720px
-               pdf 너비 pw(mm)에 canvas 너비를 꽉 맞춤
-               → 1 canvas px = pw/canvas.width mm */
-            var PX_MM = pw / canvas.width;   /* mm per canvas-px */
-            var totalMM = canvas.height * PX_MM;
-            var pages = Math.ceil(totalMM / ph);
-            for(var pg=0; pg<pages; pg++){
-              if(pg>0) pdf.addPage();
-              /* 이번 페이지에 해당하는 canvas 세로 px 범위 */
-              var srcYpx = Math.round(pg * ph / PX_MM);
-              var srcHpx = Math.min(Math.round(ph / PX_MM), canvas.height - srcYpx);
-              if(srcHpx <= 0) break;
-              var c2 = document.createElement('canvas');
-              c2.width = canvas.width; c2.height = srcHpx;
-              c2.getContext('2d').drawImage(canvas, 0,srcYpx, canvas.width,srcHpx, 0,0, canvas.width,srcHpx);
-              /* 실제 내용 높이(mm) — 마지막 페이지는 짧을 수 있음 */
-              var imgH = srcHpx * PX_MM;
-              pdf.addImage(c2.toDataURL('image/jpeg',0.95), 'JPEG', marg, marg, pw, imgH);
+            var marg=10; /* 여백 mm */
+            var pw=A4W-marg*2;  /* 인쇄 너비: 190mm */
+            var ph=A4H-marg*2;  /* 인쇄 높이: 277mm */
+            /* canvas는 scale:2.5이므로 논리 px=720 → canvas.width=1800
+               pw mm에 canvas 너비를 꽉 맞춤: 1 canvas-px = pw/canvas.width mm */
+            var PX_MM=pw/canvas.width;
+            var totalMM=canvas.height*PX_MM;
+            var pages=Math.ceil(totalMM/ph);
+            for(var pg=0;pg<pages;pg++){
+              if(pg>0)pdf.addPage();
+              var srcYpx=Math.round(pg*ph/PX_MM);
+              var srcHpx=Math.min(Math.round(ph/PX_MM),canvas.height-srcYpx);
+              if(srcHpx<=0)break;
+              /* 마지막 페이지 빈공간 방지: 실제 내용 높이만큼만 */
+              var c2=document.createElement('canvas');
+              c2.width=canvas.width;c2.height=srcHpx;
+              c2.getContext('2d').drawImage(canvas,0,srcYpx,canvas.width,srcHpx,0,0,canvas.width,srcHpx);
+              var imgH=srcHpx*PX_MM;
+              /* PNG로 저장 → 선명도 향상 */
+              pdf.addImage(c2.toDataURL('image/png'),'PNG',marg,marg,pw,imgH);
             }
             pdf.save(userNm+'.pdf');
             _pb.textContent='📄 PDF 저장';_pb.disabled=false;
@@ -3712,8 +3711,8 @@ function _doPrintOverlay(){
             _pb.textContent='📄 PDF 저장';_pb.disabled=false;
             alert('PDF 생성 오류: '+err+'\n\n브라우저 공유→인쇄 메뉴를 이용해주세요.');
           });
-        },600); /* 폰트/이미지 렌더 대기 */
-      },400);
+        },800);
+      },500);
     });});
   });
   setSt('보고서 열림 — PDF 저장 또는 닫기','g');
@@ -6072,25 +6071,15 @@ window._doSv=function(){
 
 window._showSaveModal=function(d){
   var old=document.getElementById('_save-done-modal');if(old)old.remove();
-  /* JSON Blob → base64 URL (사진 제외 버전 for URL) */
-  var dNoPhoto=JSON.parse(JSON.stringify(d));
-  dNoPhoto.photos=null;dNoPhoto.svgImg=null;
   var jsonStr=JSON.stringify(d,null,2);
-  var jsonStrLight=JSON.stringify(dNoPhoto);
-  /* URL 공유용: base64 압축 */
-  var b64='';
-  try{b64=btoa(unescape(encodeURIComponent(jsonStrLight)));}catch(e){b64='';}
-  var shareUrl=b64?window.location.origin+window.location.pathname+'?p='+b64:'';
-  var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','');
+  var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace(/\.$/,'');
   var filename=(d.name||'현장')+'_'+dt+'.json';
   var m=document.createElement('div');m.id='_save-done-modal';
   m.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.82);z-index:99999;display:flex;align-items:center;justify-content:center';
-  m.innerHTML='<div style="background:#161b22;border:1px solid #f7c948;border-radius:12px;width:360px;max-width:94vw;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.6)">'
+  m.innerHTML='<div style="background:#161b22;border:1px solid #f7c948;border-radius:12px;width:340px;max-width:94vw;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.6)">'
     +'<div style="font-size:15px;font-weight:900;color:#f7c948;margin-bottom:14px">💾 저장 완료: '+d.name+'</div>'
-    +'<button id="_sv-dl-btn" style="width:100%;background:#f7c948;border:none;color:#000;padding:10px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;margin-bottom:8px">📥 JSON 파일 다운로드 (전체 저장)</button>'
-    +(shareUrl?'<button id="_sv-url-btn" style="width:100%;background:#1c2230;border:1px solid #58a6ff;color:#58a6ff;padding:10px;border-radius:7px;cursor:pointer;font-size:13px;font-family:inherit;margin-bottom:8px">🔗 공유 URL 복사 (사진 제외)</button>':'')
-    +(shareUrl?'<div id="_sv-url-box" style="display:none;background:#0d1117;border:1px solid #444;border-radius:6px;padding:8px;font-size:10px;color:#8b949e;word-break:break-all;margin-bottom:8px;max-height:80px;overflow:auto">'+shareUrl+'</div>':'')
-    +'<div style="font-size:11px;color:#555;margin-bottom:10px">✅ 기기 내 앱 메모리에도 자동 저장됨<br>📸 사진은 JSON 파일에만 포함</div>'
+    +'<button id="_sv-dl-btn" style="width:100%;background:#f7c948;border:none;color:#000;padding:11px;border-radius:7px;cursor:pointer;font-weight:700;font-size:14px;font-family:inherit;margin-bottom:8px">📥 JSON 파일 다운로드</button>'
+    +'<div style="font-size:11px;color:#555;margin-bottom:12px">✅ 기기 내 앱 메모리에도 자동 저장됨<br>📸 사진 포함 전체 백업 파일</div>'
     +'<button id="_sv-close-btn" style="width:100%;background:transparent;border:1px solid #444;color:#888;padding:8px;border-radius:7px;cursor:pointer;font-size:13px;font-family:inherit">닫기</button>'
     +'</div>';
   document.body.appendChild(m);
@@ -6102,14 +6091,6 @@ window._showSaveModal=function(d){
     setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},200);
     setSt('📥 다운로드: '+filename,'g');
   });
-  if(shareUrl){
-    document.getElementById('_sv-url-btn').addEventListener('click',function(){
-      var box=document.getElementById('_sv-url-box');
-      if(box){box.style.display=box.style.display==='none'?'block':'none';}
-      try{navigator.clipboard.writeText(shareUrl).then(function(){setSt('🔗 공유 URL 복사됨','g');});
-      }catch(e){setSt('🔗 URL을 직접 복사하세요','y');}
-    });
-  }
   document.getElementById('_sv-close-btn').addEventListener('click',function(){
     var mo=document.getElementById('_save-done-modal');if(mo)mo.remove();
   });
@@ -6148,6 +6129,9 @@ function _restore(data){
   if(s.rotA!==undefined){rotA=s.rotA;
     var rs=document.getElementById('rsl');if(rs)rs.value=rotA;
     var rv=document.getElementById('rv');if(rv)rv.textContent=rotA+'°';}
+  /* 방위각(mod-azimuth) → compass UI 동기화 */
+  try{_syncCompass(false);}catch(e){}
+  try{_updateOrientBtn();}catch(e){}
   if(data.view)map.setView([data.view.lat,data.view.lng],data.view.zoom);
   (data.zones||[]).forEach(function(zd,zi){
     var col=getZoneColor(zi);
@@ -6211,20 +6195,21 @@ function _restore(data){
       try{calcSim();}catch(e){}
     }catch(e){}
   }
-  /* 보고서 자동 활성화 (저장 당시 완성 상태였던 경우) */
   setMode('pan');
-  if(isFinished&&zones.length){
-    try{fillRpt();}catch(e){}
-    goTab(3);
-    /* 사진 없으면 SVG 배치도 안내 숨김 (이미 불러온 사진이 있거나 SVG 있음) */
-    var cg=document.getElementById('capture-guide-inline');
-    if(cg){if(confirmedMapImgs.length||confirmedSVGImg)cg.style.display='block';else cg.style.display='none';}
-  } else {
-    goTab(zones.length?2:0);
-  }
   try{map.invalidateSize();}catch(e){}
-  setSt('📂 불러오기 완료','g');
-  /* PVGIS 복원: 저장된 GHI Raw 있으면 재조회 없이 즉시 복원, 없으면 API 재조회 */
+  /* PVGIS 복원 → 완료 후 fillRpt/탭이동 */
+  function _afterPvgis(){
+    if(isFinished&&zones.length){
+      try{fillRpt();}catch(e){}
+      goTab(3);
+      var cg=document.getElementById('capture-guide-inline');
+      if(cg){cg.style.display=(confirmedMapImgs.length||confirmedSVGImg)?'block':'none';}
+    } else {
+      goTab(zones.length?2:0);
+    }
+    setSt('📂 불러오기 완료','g');
+  }
+  /* PVGIS: 저장된 GHI Raw 있으면 즉시 복원, 없으면 재조회 */
   setTimeout(function(){
     if(data.pvgis&&data.pvgis.ghiRaw&&data.pvgis.ghiRaw.length&&data.pvgis.lat!==null){
       _pvgisLat=data.pvgis.lat;_pvgisLng=data.pvgis.lng;
@@ -6232,24 +6217,31 @@ function _restore(data){
       _pvgisGen=data.pvgis.gen||null;
       _pvgisGenBase=data.pvgis.genBase||0;
       try{_updateGenCard();updMetrics();}catch(e){}
-      setSt('📂 불러오기 완료 (PVGIS 복원)','g');
+      /* 방위각 기반 POA 재계산 */
+      try{
+        var _tilt2=parseFloat((document.getElementById('mod-tilt')||{}).value)||15;
+        var _az2=parseFloat((document.getElementById('mod-azimuth')||{}).value)||0;
+        if(_pvgisGhiRaw&&_pvgisGhiRaw.length&&_pvgisLat!==null){
+          var _poa2=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,_tilt2,_az2);
+          _pvgisGen=Math.round(_poa2*0.78);
+          try{_updateGenCard();updMetrics();}catch(e){}
+        }
+      }catch(e){}
+      _afterPvgis();
       return;
     }
-    var lat=null,lng=null;
+    var lat2=null,lng2=null;
     if(data.pvgis&&data.pvgis.lat!==null&&data.pvgis.lat!==undefined){
-      lat=data.pvgis.lat;lng=data.pvgis.lng;
+      lat2=data.pvgis.lat;lng2=data.pvgis.lng;
     } else if(zones.length&&zones[0].pts&&zones[0].pts.length){
-      var sumLat=0,sumLng=0,cnt=0;
-      zones[0].pts.forEach(function(p){sumLat+=p[0];sumLng+=p[1];cnt++;});
-      if(cnt>0){lat=sumLat/cnt;lng=sumLng/cnt;}
-    } else {
-      var c=map.getCenter();lat=c.lat;lng=c.lng;
-    }
-    if(lat!==null){
-      _pvgisLat=null;
-      _fetchPVGIS(lat,lng);
-    }
-  },500);
+      var sLat=0,sLng=0,cnt2=0;
+      zones[0].pts.forEach(function(p){sLat+=p[0];sLng+=p[1];cnt2++;});
+      if(cnt2>0){lat2=sLat/cnt2;lng2=sLng/cnt2;}
+    } else {var c2=map.getCenter();lat2=c2.lat;lng2=c2.lng;}
+    if(lat2!==null){_pvgisLat=null;_fetchPVGIS(lat2,lng2);}
+    /* 재조회 시엔 API 응답 후 자동으로 updMetrics 호출됨 */
+    _afterPvgis();
+  },300);
 }
 
 window.projLoad=function(id){
