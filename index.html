@@ -3439,11 +3439,11 @@ function _doPrintOverlay(){
   if(!hasUserPhotos&&zones.length){confirmedSVGImg=svgToDataUrl(buildPrintSVG());}
   if(confirmedSVGImg&&!hasUserPhotos)html+='<h2>배치 현황 (자동 생성)</h2><div class="map-wrap"><img src="'+confirmedSVGImg+'" style="width:100%;height:auto;display:block"></div>';
   if(hasUserPhotos){
-    html+='<h2>메인 사진</h2><div class="map-wrap"><img src="'+confirmedMapImgs[0].src+'" style="width:100%;height:auto;display:block;max-height:320px;object-fit:contain"></div>';
+    html+='<h2>메인 사진</h2><div class="map-wrap"><img src="'+confirmedMapImgs[0].src+'" style="width:100%;height:auto;display:block"></div>';
     if(confirmedMapImgs.length>1){
       var refImgs=confirmedMapImgs.slice(1);
       html+='<h2>참고 사진 ('+refImgs.length+'장)</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
-      refImgs.forEach(function(img,i){html+='<div style="border:1px solid #dde;border-radius:4px;overflow:hidden"><img src="'+img.src+'" style="width:100%;height:160px;object-fit:cover;display:block"><div style="font-size:9px;color:#999;padding:2px 5px">참고사진 '+(i+1)+(img.name?' — '+img.name:'')+'</div></div>';});
+      refImgs.forEach(function(img,i){html+='<div style="border:1px solid #dde;border-radius:4px;overflow:hidden"><img src="'+img.src+'" style="width:100%;height:auto;display:block"><div style="font-size:9px;color:#999;padding:2px 5px">참고사진 '+(i+1)+(img.name?' — '+img.name:'')+'</div></div>';});
       html+='</div>';
     }
   }
@@ -3532,7 +3532,7 @@ function _doPrintOverlay(){
     html+='<tr><td>SMP 단가</td><td>'+_ssmp+' 원/kWh</td><td>REC×가중치</td><td>'+_srec+'×'+_srecw+'='+(_srec*_srecw).toFixed(1)+' 원/kWh</td></tr>';
     html+='</table>';
     html+='<h2 style="background:#1a4a7a;color:#fff;font-size:11px;padding:5px 10px;margin:8px 0 0;border-radius:4px 4px 0 0">연도별 수익 시뮬레이션</h2>';
-    html+='<div style="overflow-x:auto"><table style="font-size:9px;min-width:700px">';
+    html+='<table class="sim-table">';
     html+='<tr style="background:#f0f4f8"><th>연차</th><th>효율</th><th style="text-align:right">발전량(kWh)</th><th style="text-align:right">매출(원)</th><th style="text-align:right">유지보수(원)</th><th style="text-align:right">이자(원)</th><th style="text-align:right">원금(원)</th><th style="text-align:right">수익금(원)</th><th>수익률</th><th style="text-align:right">누적수익(원)</th><th style="text-align:right">대출잔액(원)</th></tr>';
     html+=_sRows;
     html+='<tr class="hl"><td><b>합계</b></td><td></td>';
@@ -3544,7 +3544,7 @@ function _doPrintOverlay(){
     html+='<td style="text-align:right;font-weight:900;color:#1a6b3a">'+_fmtC(Math.round(_sNetProfit))+'</td>';
     html+='<td style="font-weight:700;color:#1a6b3a">'+_irr.toFixed(1)+'%</td>';
     html+='<td colspan="2"></td></tr>';
-    html+='</table></div>';
+    html+='</table>';
     html+='<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.5">※ 유지보수비: 1년차 매출의 5%, 이후 매년 1% 상승 | 원금균등상환 | SMP+REC 단가 고정 가정</div>';
     html+='</div>';
   }
@@ -3625,26 +3625,36 @@ function _doPrintOverlay(){
       var cloned=ovEl.cloneNode(true);
       var nopr=cloned.querySelector('.no-print');if(nopr)nopr.remove();
       var bodyHtml=cloned.innerHTML;
-      /* 완전한 흰 배경 독립 HTML 문서 */
+      /* 완전한 흰 배경 독립 HTML 문서 — 웹폰트 포함 */
       var pdfHtml='<!DOCTYPE html><html lang="ko"><head>'
         +'<meta charset="UTF-8">'
         +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+        +'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">'
         +'<style>'
         +'*{box-sizing:border-box;margin:0;padding:0}'
-        +'html,body{background:#fff!important;color:#1a1a2e!important;font-family:sans-serif;width:720px;padding:12px}'
-        +'h2{font-size:11px;color:#fff!important;background:#1a5276!important;padding:5px 10px;margin:10px 0 0;border-radius:4px 4px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-        +'table{width:100%;border-collapse:collapse;font-size:11px}'
-        +'td,th{padding:5px 8px;border:1px solid #dde;color:#1a1a2e!important}'
+        +'html,body{background:#fff!important;color:#1a1a2e!important;font-family:"Noto Sans KR",sans-serif;width:720px;padding:12px;word-break:keep-all;overflow-wrap:break-word;}'
+        +'h2{font-size:11px;color:#fff!important;background:#1a5276!important;padding:5px 10px;margin:10px 0 0;border-radius:4px 4px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:inherit}'
+        +'table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}'
+        +'td,th{padding:4px 5px;border:1px solid #dde;color:#1a1a2e!important;word-break:keep-all;overflow-wrap:break-word;vertical-align:middle}'
         +'th{background:#f0f4f8!important;font-weight:500;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         +'.hl td{font-weight:700;color:#1a5276!important;background:#fef9e7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         +'.gen td{color:#1a6b3a!important;font-weight:700}'
+        /* 사진: 비율 유지, object-fit 제거, height:auto */
         +'.map-wrap{margin:0 0 10px;border:2px solid #1a5276;border-radius:0 0 6px 6px;overflow:hidden}'
-        +'.map-wrap img{display:block;width:100%;height:auto}'
+        +'.map-wrap img{display:block;width:100%!important;height:auto!important;object-fit:unset!important;max-height:none!important}'
+        /* 참고사진 그리드: 비율 유지 */
+        +'.ref-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}'
+        +'.ref-grid img{display:block;width:100%!important;height:auto!important;object-fit:unset!important}'
         +'.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:12px}'
         +'.logo{font-size:18px;font-weight:900;color:#e6a817!important}'
         +'.foot{font-size:9px;color:#999;border-top:1px solid #eee;padding-top:6px;margin-top:14px;text-align:center}'
+        /* 수익성 시뮬 테이블: min-width 제거, 폰트 줄이기, 합계행 고정 */
+        +'.sim-table{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed}'
+        +'.sim-table td,.sim-table th{padding:3px 2px;border:1px solid #dde;text-align:right;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.sim-table th{background:#f0f4f8!important;text-align:center;font-size:7.5px}'
+        +'.sim-table tr.hl td{background:#fef9e7!important;font-weight:700;white-space:nowrap}'
         +'div[style*="background:#1a5276"],div[style*="background: #1a5276"]{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-        +'div[style*="background:#1a6b3a"],div[style*="background:#7d3c11"]{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
+        +'div[style*="background:#1a6b3a"],div[style*="background:#7d3c11"],div[style*="background:#1a4a7a"]{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
         +'</style></head><body>'+bodyHtml+'</body></html>';
       /* iframe을 화면 밖에 생성 */
       var ifr=document.createElement('iframe');
@@ -3653,15 +3663,15 @@ function _doPrintOverlay(){
       ifr.contentDocument.open();
       ifr.contentDocument.write(pdfHtml);
       ifr.contentDocument.close();
-      /* 이미지 로드 대기 후 캡처 */
+      /* 이미지+웹폰트 로드 대기 후 캡처 */
       setTimeout(function(){
         var idoc=ifr.contentDocument||ifr.contentWindow.document;
         var iBody=idoc.body;
         var fullH=Math.max(iBody.scrollHeight,iBody.offsetHeight);
         ifr.style.height=fullH+'px';
-        /* 배경색 강제 흰색 */
         iBody.style.background='#fff';
         iBody.style.color='#1a1a2e';
+        /* 웹폰트 로딩 완료 대기 */
         setTimeout(function(){
           html2canvas(iBody,{
             scale:2.5,
@@ -3711,8 +3721,8 @@ function _doPrintOverlay(){
             _pb.textContent='📄 PDF 저장';_pb.disabled=false;
             alert('PDF 생성 오류: '+err+'\n\n브라우저 공유→인쇄 메뉴를 이용해주세요.');
           });
-        },800);
-      },500);
+        },1200); /* 웹폰트+이미지 렌더 대기 */
+      },600);
     });});
   });
   setSt('보고서 열림 — PDF 저장 또는 닫기','g');
@@ -6199,13 +6209,15 @@ function _restore(data){
   try{map.invalidateSize();}catch(e){}
   /* PVGIS 복원 → 완료 후 fillRpt/탭이동 */
   function _afterPvgis(){
-    if(isFinished&&zones.length){
+    if(zones.length){
+      /* 확정된 부지가 있으면 항상 보고서로 */
+      isFinished=true;
       try{fillRpt();}catch(e){}
       goTab(3);
       var cg=document.getElementById('capture-guide-inline');
       if(cg){cg.style.display=(confirmedMapImgs.length||confirmedSVGImg)?'block':'none';}
     } else {
-      goTab(zones.length?2:0);
+      goTab(0);
     }
     setSt('📂 불러오기 완료','g');
   }
@@ -6214,19 +6226,15 @@ function _restore(data){
     if(data.pvgis&&data.pvgis.ghiRaw&&data.pvgis.ghiRaw.length&&data.pvgis.lat!==null){
       _pvgisLat=data.pvgis.lat;_pvgisLng=data.pvgis.lng;
       _pvgisGhiRaw=data.pvgis.ghiRaw;
-      _pvgisGen=data.pvgis.gen||null;
       _pvgisGenBase=data.pvgis.genBase||0;
-      try{_updateGenCard();updMetrics();}catch(e){}
-      /* 방위각 기반 POA 재계산 */
+      /* 방위각 기반 POA 재계산 → 정확한 발전량 복원 */
       try{
         var _tilt2=parseFloat((document.getElementById('mod-tilt')||{}).value)||15;
         var _az2=parseFloat((document.getElementById('mod-azimuth')||{}).value)||0;
-        if(_pvgisGhiRaw&&_pvgisGhiRaw.length&&_pvgisLat!==null){
-          var _poa2=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,_tilt2,_az2);
-          _pvgisGen=Math.round(_poa2*0.78);
-          try{_updateGenCard();updMetrics();}catch(e){}
-        }
-      }catch(e){}
+        var _poa2=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,_tilt2,_az2);
+        _pvgisGen=Math.round(_poa2*0.78);
+      }catch(e){_pvgisGen=data.pvgis.gen||null;}
+      try{_updateGenCard();updMetrics();}catch(e){}
       _afterPvgis();
       return;
     }
@@ -6239,7 +6247,6 @@ function _restore(data){
       if(cnt2>0){lat2=sLat/cnt2;lng2=sLng/cnt2;}
     } else {var c2=map.getCenter();lat2=c2.lat;lng2=c2.lng;}
     if(lat2!==null){_pvgisLat=null;_fetchPVGIS(lat2,lng2);}
-    /* 재조회 시엔 API 응답 후 자동으로 updMetrics 호출됨 */
     _afterPvgis();
   },300);
 }
