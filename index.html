@@ -19,9 +19,6 @@ var _pwaInstallEvent = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _pwaInstallEvent = e;
-  /* PC 툴바 설치 버튼 표시 */
-  var btn = document.getElementById('pwa-install-btn');
-  if (btn) btn.style.display = 'inline-flex';
   /* ··· 메뉴 안 설치 버튼 강조 */
   var menuBtn = document.getElementById('pwa-install-btn-menu');
   if (menuBtn) {
@@ -33,10 +30,11 @@ window.addEventListener('beforeinstallprompt', function(e) {
 });
 window.addEventListener('appinstalled', function() {
   _pwaInstallEvent = null;
+  /* 설치 완료 후 PC 버튼 숨기기 */
   var btn = document.getElementById('pwa-install-btn');
   if (btn) btn.style.display = 'none';
   var menuBtn = document.getElementById('pwa-install-btn-menu');
-  if (menuBtn) menuBtn.textContent = '✅ 앱 설치 완료';
+  if (menuBtn) menuBtn.textContent = '✅ 설치 완료';
   console.log('[PWA] 설치 완료');
 });
 </script>
@@ -247,7 +245,7 @@ body.fullmap-mode #scale-bar{z-index:9010!important;}
     <div class="toolbar">
       <button class="tb" id="bmanual" onclick="openManual('all')" style="border-color:var(--accent);color:var(--accent);background:rgba(247,201,72,.1);font-weight:700">📖 사용법</button>
       <!-- 앱 설치 버튼: PC 툴바에 표시, 모바일은 ··· 메뉴에서 -->
-      <button id="pwa-install-btn" onclick="pwaTriggerInstall()" style="display:none;border:1px solid #f7c948;color:#f7c948;background:rgba(247,201,72,.1);font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;align-items:center;gap:4px" title="홈화면에 앱 설치">📲 설치</button>
+      <button id="pwa-install-btn" onclick="pwaTriggerInstall()" class="tb tb-pc-only" style="border-color:#f7c948;color:#f7c948;background:rgba(247,201,72,.08);font-weight:700" title="홈화면에 앱 설치">📲 앱 설치</button>
       <div style="position:relative;display:inline-flex">
         <button class="tb" onclick="projectSave()" style="border-color:#39d353;color:#39d353;background:rgba(57,211,83,.08);font-weight:700;border-right:none;border-radius:4px 0 0 4px;margin:0">💾 저장</button>
         <button onclick="toggleDD(event)" style="border:1px solid #39d353;border-left:1px solid rgba(57,211,83,.2);color:#39d353;background:rgba(57,211,83,.08);padding:4px 7px;cursor:pointer;font-size:11px;border-radius:0 4px 4px 0;font-family:inherit">▾</button>
@@ -3397,7 +3395,7 @@ function _doPrintOverlay(){
   html+='<b style="font-size:14px;color:#1a5276;white-space:nowrap">☀ 태양광 설치 계획서</b>';
   html+='<div style="display:flex;gap:6px">';
   html+='<button onclick="window.print()" style="background:#1a5276;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:sans-serif;white-space:nowrap">🖨 인쇄/PDF</button>';
-  html+='<button onclick="document.getElementById(\'_report-overlay\').remove()" style="background:#f85149;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:sans-serif;white-space:nowrap">✕ 닫기</button>';
+  html+='<button id="_rep-close-btn" style="background:#f85149;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:sans-serif;white-space:nowrap">✕ 닫기</button>';
   html+='</div></div>';
 
   html+='<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><div class="logo">☀ SOLARDESIGN</div></div><div style="font-size:13px;font-weight:700;color:#1a5276">태양광 설치 계획서</div></div>';
@@ -3451,12 +3449,145 @@ function _doPrintOverlay(){
   }
   html+='<div class="foot">본 계획서는 ☀ SOLARDESIGN (PARU ENS)으로 자동 생성된 참고 자료입니다.</div>';
 
+  /* ══ 수익 시뮬레이터 (활성화된 경우) ══ */
+  if(_estOn&&_simOn){
+    var _fmtC=function(n){return Math.round(n).toLocaleString('ko-KR');};
+    var _fmtB=function(n){
+      var a=Math.abs(Math.round(n));
+      if(a>=100000000)return (Math.round(n/100000000*10)/10).toFixed(1)+'억';
+      if(a>=10000)return Math.round(n/10000).toLocaleString('ko-KR')+'만';
+      return Math.round(n).toLocaleString('ko-KR');
+    };
+    var _sy=parseInt((document.getElementById('sim-years')||{}).value)||15;
+    var _seq=parseFloat((document.getElementById('sim-equity')||{}).value)||30;
+    var _ssmp=parseFloat((document.getElementById('sim-smp')||{}).value)||115;
+    var _srate=parseFloat((document.getElementById('sim-rate')||{}).value)||4;
+    var _srec=parseFloat((document.getElementById('sim-rec')||{}).value)||71;
+    var _srecw=parseFloat((document.getElementById('sim-recw')||{}).value)||1.0;
+    var _svat=parseFloat((document.getElementById('est-vat')||{}).value)||0;
+    var _sTotalCost=0;
+    var _ppkFx3=parseFloat((document.getElementById('est-ppk-fix')||{}).value)||1100000;
+    var _ppkFe3=parseFloat((document.getElementById('est-ppk-fe')||{}).value)||1300000;
+    var _ppkFd3=parseFloat((document.getElementById('est-ppk-fd')||{}).value)||1500000;
+    function _ppkT3m(t){return t==='fe'?_ppkFe3:t==='fd'?_ppkFd3:_ppkFx3;}
+    zones.forEach(function(z){_sTotalCost+=parseFloat(z.kw||0)*_ppkT3m(z.iType);});
+    _sTotalCost=Math.round(_sTotalCost*(1+_svat/100));
+    var _sEquity=Math.round(_sTotalCost*_seq/100);
+    var _sLoan=_sTotalCost-_sEquity;
+    var _DROP=0.004;
+    var _sRevArr=[];
+    zones.forEach(function(z){
+      var kw=parseFloat(z.kw||0);if(!kw)return;
+      var gkwp=_getGenByType(z.iType||'rf',z.tilt,z.rotA);
+      _sRevArr.push({kw:kw,annKwh:kw*gkwp});
+    });
+    var _sRows='',_stRev=0,_stOM=0,_stInt=0,_stRepay=0,_stKwh=0;
+    var _scumNet=0,_sbep=null,_somRate=0,_saRev1=0;
+    var _baseKwh=0;
+    _sRevArr.forEach(function(z){_baseKwh+=z.annKwh;});
+    for(var _sy2=1;_sy2<=_sy;_sy2++){
+      var _deg=1-_DROP*(_sy2-1);
+      var _sysEff=Math.round((1-_DROP*(_sy2-1))*1000)/10;
+      var _yearKwh=Math.round(_baseKwh*_deg);
+      var _rev=0;
+      _sRevArr.forEach(function(z){_rev+=z.annKwh*_deg*(_ssmp+_srec*_srecw);});
+      if(_sy2===1)_saRev1=_rev;
+      _somRate=_sy2===1?_rev*0.05:_somRate*1.01;
+      var _remLoan=_sLoan*(1-(_sy2-1)/_sy);
+      var _intAmt=_remLoan*(_srate/100);
+      var _loanRepay=_sLoan/_sy;
+      var _netY=_rev-_somRate-_intAmt-_loanRepay;
+      var _annRate=_sTotalCost>0?Math.round(_netY/_sTotalCost*1000)/10:0;
+      _scumNet+=_netY;
+      _stRev+=_rev;_stOM+=_somRate;_stInt+=_intAmt;_stRepay+=_loanRepay;_stKwh+=_yearKwh;
+      if(_sbep===null&&_scumNet>=_sTotalCost)_sbep=_sy2;
+      var _loanBalance=_sLoan*(1-_sy2/_sy);
+      _sRows+='<tr>'
+        +'<td style="text-align:center">'+_sy2+'</td>'
+        +'<td style="text-align:center">'+_sysEff.toFixed(1)+'%</td>'
+        +'<td style="text-align:right;color:#1a5276">'+_fmtC(_yearKwh)+'</td>'
+        +'<td style="text-align:right">'+_fmtC(Math.round(_rev))+'</td>'
+        +'<td style="text-align:right">'+_fmtC(Math.round(_somRate))+'</td>'
+        +'<td style="text-align:right">'+_fmtC(Math.round(_intAmt))+'</td>'
+        +'<td style="text-align:right">'+_fmtC(Math.round(_loanRepay))+'</td>'
+        +'<td style="text-align:right;font-weight:700;color:'+(Math.round(_netY)>=0?'#1a6b3a':'#c0392b')+'">'+_fmtC(Math.round(_netY))+'</td>'
+        +'<td style="text-align:center;color:#555">'+_annRate.toFixed(1)+'%</td>'
+        +'<td style="text-align:right;color:#1a5276">'+_fmtC(Math.round(_scumNet))+'</td>'
+        +'<td style="text-align:right;color:#888">'+_fmtC(Math.round(_loanBalance))+'</td>'
+        +'</tr>';
+    }
+    var _sNetProfit=_stRev-_stOM-_stInt-_sLoan;
+    var _sBepStr=_sbep?('약 '+_sbep+'년'):'사업기간 내 미달성';
+    var _irr=_sTotalCost>0?Math.round(_sNetProfit/_sy/_sTotalCost*1000)/10:0;
+    html+='<div style="margin-top:16px">';
+    html+='<div style="font-size:15px;font-weight:900;color:#1a5276;border-bottom:3px solid #1a5276;padding-bottom:6px;margin-bottom:10px">📈 수익성 분석</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">';
+    html+='<div style="background:#1a5276;color:#fff;border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;opacity:.8">손익분기점 BEP</div><div style="font-size:16px;font-weight:900">'+_sBepStr+'</div></div>';
+    html+='<div style="background:#1a6b3a;color:#fff;border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;opacity:.8">'+_sy+'년 순수익</div><div style="font-size:16px;font-weight:900">약 '+_fmtB(_sNetProfit)+'</div></div>';
+    html+='<div style="background:#7d3c11;color:#fff;border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;opacity:.8">단순 수익률</div><div style="font-size:16px;font-weight:900">약 '+_irr.toFixed(1)+'%</div></div>';
+    html+='</div>';
+    html+='<table style="margin-bottom:8px"><tr><th colspan="4" style="background:#1a4a7a;color:#fff">사업 조건</th></tr>';
+    html+='<tr><td>총 사업비</td><td>'+_fmtC(_sTotalCost)+' 원</td><td>자기자본 ('+_seq+'%)</td><td>'+_fmtC(_sEquity)+' 원</td></tr>';
+    html+='<tr><td>타인자본 ('+Math.round(100-_seq)+'%)</td><td>'+_fmtC(_sLoan)+' 원</td><td>대출 금리</td><td>'+_srate+'%</td></tr>';
+    html+='<tr><td>SMP 단가</td><td>'+_ssmp+' 원/kWh</td><td>REC×가중치</td><td>'+_srec+'×'+_srecw+'='+(_srec*_srecw).toFixed(1)+' 원/kWh</td></tr>';
+    html+='</table>';
+    html+='<h2 style="background:#1a4a7a;color:#fff;font-size:11px;padding:5px 10px;margin:8px 0 0;border-radius:4px 4px 0 0">연도별 수익 시뮬레이션</h2>';
+    html+='<div style="overflow-x:auto"><table style="font-size:9px;min-width:700px">';
+    html+='<tr style="background:#f0f4f8"><th>연차</th><th>효율</th><th style="text-align:right">발전량(kWh)</th><th style="text-align:right">매출(원)</th><th style="text-align:right">유지보수(원)</th><th style="text-align:right">이자(원)</th><th style="text-align:right">원금(원)</th><th style="text-align:right">수익금(원)</th><th>수익률</th><th style="text-align:right">누적수익(원)</th><th style="text-align:right">대출잔액(원)</th></tr>';
+    html+=_sRows;
+    html+='<tr class="hl"><td><b>합계</b></td><td></td>';
+    html+='<td style="text-align:right;color:#1a5276"><b>'+_fmtC(_stKwh)+'</b></td>';
+    html+='<td style="text-align:right"><b>'+_fmtC(Math.round(_stRev))+'</b></td>';
+    html+='<td style="text-align:right"><b>'+_fmtC(Math.round(_stOM))+'</b></td>';
+    html+='<td style="text-align:right"><b>'+_fmtC(Math.round(_stInt))+'</b></td>';
+    html+='<td style="text-align:right"><b>'+_fmtC(Math.round(_stRepay))+'</b></td>';
+    html+='<td style="text-align:right;font-weight:900;color:#1a6b3a">'+_fmtC(Math.round(_sNetProfit))+'</td>';
+    html+='<td style="font-weight:700;color:#1a6b3a">'+_irr.toFixed(1)+'%</td>';
+    html+='<td colspan="2"></td></tr>';
+    html+='</table></div>';
+    html+='<div style="font-size:9px;color:#888;margin-top:4px;line-height:1.5">※ 유지보수비: 1년차 매출의 5%, 이후 매년 1% 상승 | 원금균등상환 | SMP+REC 단가 고정 가정</div>';
+    html+='</div>';
+  }
+
+  /* ══ 발전량 산출 근거 ══ */
+  html+='<div style="margin-top:14px">';
+  html+='<h2 style="background:#1a4a7a">📊 발전량 산출 내역</h2>';
+  html+='<div style="background:#f0f7ff;border:1px solid #b0cfe8;border-radius:0 0 6px 6px;padding:10px 14px;font-size:11px;color:#1a3a5c">';
+  html+='<div style="margin-bottom:4px">• 설치 지역: <b>'+(_REGION_LABEL[(_regSel?_regSel.value:'jeonnam')]||'전남·광주')+'</b></div>';
+  html+='<div style="margin-bottom:4px">• 기준 발전량(고정식): <b>'+_baseGen+' kWh/kWp·년</b>'+(_isPvgis?' <span style="color:#1a6b3a;font-weight:700">[PVGIS 실측]</span>':' <span style="color:#888">[지역 평균]</span>')+'</div>';
+  if(_tf>1.0){
+    var _hasfe3=zones.some(function(z){return z.iType==='fe';});
+    var _hasfd3=zones.some(function(z){return z.iType==='fd';});
+    var _tn3=[];
+    if(_hasfe3)_tn3.push('단축식(×1.15)');
+    if(_hasfd3)_tn3.push('양축식(×1.30)');
+    html+='<div style="margin-bottom:4px">• 트래커 적용: <b>'+_tn3.join(', ')+'</b></div>';
+  }
+  html+='<table style="margin-top:8px"><tr><th>부지명</th><th>유형</th><th>용량(kW)</th><th>발전량(kWh/kWp·년)</th><th>보정계수</th><th>예상연간(MWh/년)</th></tr>';
+  zones.forEach(function(z,i){
+    var _zn=z.name||('부지 '+(i+1));
+    var _zGen=_getGenByType(z.iType||'rf',z.tilt,z.rotA);
+    var _zKw=parseFloat(z.kw||0);
+    var _zAnn=(_zKw*_zGen/1000).toFixed(2);
+    var _tf4=({'rf':1.0,'rg':1.0,'fs':1.0,'fe':1.15,'fd':1.30})[z.iType||'rf']||1.0;
+    var _tm4={'rf':'평판식','rg':'인삼밭식','fs':'고정식','fe':'단축식','fd':'양축식'};
+    html+='<tr><td>'+_zn+'</td><td>'+_tm4[z.iType]+'</td><td style="text-align:right">'+_zKw.toFixed(2)+'</td><td style="text-align:right">'+_baseGen+'</td><td style="text-align:center">×'+_tf4.toFixed(2)+'</td><td style="text-align:right;font-weight:700;color:#1a6b3a">'+_zAnn+'</td></tr>';
+  });
+  var _totalMwh=_calcAnnualGen(totalKw,zones).toFixed(2);
+  html+='<tr class="hl"><td colspan="5"><b>합계</b></td><td style="text-align:right;font-weight:700;color:#1a6b3a">'+_totalMwh+' MWh/년</td></tr>';
+  html+='</table>';
+  html+='<div style="padding:5px 7px;background:#ddeeff;border-radius:4px;font-size:10px;color:#1a3a5c;line-height:1.6;margin-top:6px">※ 실제 발전량은 음영, 설치 경사각, 모듈 성능저하율 등에 따라 달라질 수 있습니다.</div>';
+  html+='</div></div>';
+
   /* 오버레이 표시 */
   var ov=document.createElement('div');
   ov.id='_report-overlay';
   ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow:auto;padding:12px;box-sizing:border-box';
   ov.innerHTML=html;
   document.body.appendChild(ov);
+  /* 닫기 버튼 이벤트 직접 바인딩 (innerHTML onclick escape 문제 방지) */
+  var _cb=document.getElementById('_rep-close-btn');
+  if(_cb)_cb.addEventListener('click',function(){var o=document.getElementById('_report-overlay');if(o)o.remove();});
   setSt('보고서 열림 — 인쇄/PDF 저장 또는 닫기','g');
 }
 
