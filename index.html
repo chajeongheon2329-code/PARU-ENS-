@@ -3105,12 +3105,19 @@ function fillRpt(){
   var tbl=document.getElementById('rzone-table');
   while(tbl.rows.length>2)tbl.deleteRow(2);
   var tm={'rf':'평판식','rg':'인삼밭식','fs':'고정식','fe':'단축식','fd':'양축식'};
+  /* 헤더 갱신 */
+  var hdr=tbl.rows[1];
+  if(hdr)hdr.innerHTML='<th>부지</th><th>모듈</th><th>용량</th><th>경사각/방위</th><th>예상 발전량</th><th>이격(mm)</th>';
   zones.forEach(function(z,i){
     var tr=tbl.insertRow();
     var zn=z.name||('부지 '+(i+1));
     var zGen=_getGenByType(z.iType||'rf', z.tilt, z.rotA);
     var zAnn=(parseFloat(z.kw||0)*zGen/1000).toFixed(2);
-    tr.innerHTML='<td>'+zn+' ('+tm[z.iType]+')</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td>'+zAnn+' MWh/년</td><td>'+(z.borderOff||0)+' mm</td>';
+    var tiltV=(z.tilt!==undefined?z.tilt:0);
+    var azV=(z.rotA!==undefined?z.rotA:0);
+    var _isFixed=(z.iType==='rf'||z.iType==='rg'||z.iType==='fs');
+    var tiltStr=_isFixed?(tiltV+'°경사/'+azV+'°방위'):'추적식';
+    tr.innerHTML='<td>'+zn+'<br><small style="color:#888">'+tm[z.iType]+'</small></td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td style="font-size:10px">'+tiltStr+'</td><td>'+zAnn+' MWh/년</td><td>'+(z.borderOff||0)+'</td>';
   });
 }
 
@@ -3401,12 +3408,14 @@ function _doPrintOverlay(){
   html+='<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><div class="logo">☀ SOLARDESIGN</div></div><div style="font-size:13px;font-weight:700;color:#1a5276">태양광 설치 계획서</div></div>';
   html+='<p style="font-size:10px;color:#777;margin-bottom:5px">작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+'</p>';
   html+='<h2>현장 정보</h2><table><tr><td>현장명</td><td>'+(document.getElementById('sname').value||'미입력')+'</td></tr><tr><td>현장 주소</td><td>'+(document.getElementById('saddr').value||'미입력')+'</td></tr></table>';
-  html+='<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>예상 발전량</th><th>면적(m²)</th><th>경계이격</th></tr>';
+  html+='<h2>부지별 배치 결과</h2><table><tr><th>부지</th><th>유형</th><th>모듈</th><th>용량</th><th>경사각/방위</th><th>예상 발전량</th><th>면적(m²)</th><th>경계이격</th></tr>';
   zones.forEach(function(z,i){
     var _zn=z.name||('부지 '+(i+1));
     var _zGen=_getGenByType(z.iType||'rf',z.tilt,z.rotA);
     var _zAnn=(parseFloat(z.kw||0)*_zGen/1000).toFixed(2);
-    html+='<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td class="gen">'+_zAnn+' MWh/년</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>';
+    var _isFixed=(z.iType==='rf'||z.iType==='rg'||z.iType==='fs');
+    var _tiltStr=_isFixed?((z.tilt||0)+'°경사/'+(z.rotA||0)+'°방위'):'추적식';
+    html+='<tr><td>'+_zn+'</td><td>'+tm[z.iType]+'</td><td>'+z.cnt+'장</td><td>'+z.kw+' kW</td><td style="font-size:9px">'+_tiltStr+'</td><td class="gen">'+_zAnn+' MWh/년</td><td>'+z.area.toFixed(0)+'</td><td>'+(z.borderOff||0)+' mm</td></tr>';
   });
   html+='</table><h2>전체 합계</h2><table><tr class="hl"><td>총 모듈 수량</td><td>'+totalCnt+' 장</td></tr><tr class="hl"><td>총 설비 용량</td><td>'+totalKw.toFixed(2)+' kW</td></tr><tr><td>설치 면적</td><td>'+totalArea.toFixed(1)+' m²</td></tr><tr><td>예상 연간 발전량</td><td>'+ann+' MWh/년</td></tr></table>';
 
@@ -5982,35 +5991,7 @@ function _refreshDD(){
 window.projectSaveAs=function(){
   var newName=prompt('저장할 현장 이름을 입력하세요:',document.getElementById('sname').value||'현장');
   if(!newName||!newName.trim())return;
-  newName=newName.trim();
-  /* 자동 완성 */
-  if(zones.length&&!isFinished){
-    confirmedSVGImg=svgToDataUrl(buildPrintSVG());
-    fillRpt();isFinished=true;
-  }
-  var dt=new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','');
-  var filename=newName+'_'+dt+'.json';
-  var d={
-    name:newName,savedAt:new Date().toISOString(),
-    settings:{sname:document.getElementById('sname').value,
-      saddr:(document.getElementById('saddr')||{}).value||'',
-      mw:document.getElementById('mw').value,mh:document.getElementById('mh').value,
-      mp:document.getElementById('mp').value,mg:document.getElementById('mg').value,
-      mborder:document.getElementById('mborder').value,
-      sregion:(document.getElementById('sregion')||{}).value||'jeonnam',
-      iType:iType,orient:orient,rotA:rotA},
-    view:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()},
-    zones:zones.map(function(z){return{pts:z.pts,mods:z.mods,iType:z.iType,orient:z.orient,
-      rotA:z.rotA,mp:z.mp,cnt:z.cnt,kw:z.kw,area:z.area,borderOff:z.borderOff,name:z.name};}),
-    photos:(confirmedMapImgs&&confirmedMapImgs.length?confirmedMapImgs.map(function(x){return{src:x.src,name:x.name||''};}):[]),
-    svgImg:(confirmedSVGImg||null)
-  };
-  var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();
-  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},100);
-  setSt('📥 저장됨: '+filename,'g');
+  _doSvWithName(newName.trim(),true); /* true = 파일 직접 다운로드 */
 };
 
 window.projectSave=function(){
@@ -6020,52 +6001,75 @@ window.projectSave=function(){
   m.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:99999;display:flex;align-items:center;justify-content:center';
   m.innerHTML='<div style="background:#161b22;border:1px solid #444;border-radius:12px;width:340px;max-width:92vw;padding:22px">'
     +'<div style="font-size:15px;font-weight:900;color:#f7c948;margin-bottom:12px">💾 현장 저장</div>'
-    +'<input id="sv-n" type="text" value="'+sug+'" style="width:100%;background:#0d1117;border:1px solid #f7c948;color:#e6edf3;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\')_doSv()">'
+    +'<input id="sv-n" type="text" value="'+sug+'" style="width:100%;background:#0d1117;border:1px solid #f7c948;color:#e6edf3;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box" onkeydown="if(event.key==='Enter')_doSvRun()">'
     +'<div style="display:flex;gap:8px;justify-content:flex-end">'
     +'<button onclick="document.getElementById(\'sv-m\').remove()" style="background:transparent;border:1px solid #444;color:#888;padding:7px 14px;border-radius:6px;cursor:pointer;font-family:inherit">취소</button>'
-    +'<button onclick="_doSv()" style="background:#f7c948;border:none;color:#000;padding:7px 18px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit">저장</button>'
+    +'<button onclick="_doSvRun()" style="background:#f7c948;border:none;color:#000;padding:7px 18px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit">저장</button>'
     +'</div></div>';
   document.body.appendChild(m);
   setTimeout(function(){var i=document.getElementById('sv-n');if(i){i.focus();i.select();}},50);
 };
 
-window._doSv=function(){
+/* ════ 공통 저장 함수 ════ */
+window._doSvRun=function(){
   var nm=(document.getElementById('sv-n').value.trim())||'현장';
-  document.getElementById('sv-m').remove();
-  /* ── 전체 상태 직렬화 헬퍼 ── */
+  var m=document.getElementById('sv-m');if(m)m.remove();
+  _doSvWithName(nm,false);
+};
+window._doSvWithName=function(nm,directDownload){
+  /* 1. 보고서 완성 강제 (zones 있는데 아직 미완성이면 자동완성) */
+  if(zones.length&&!isFinished){
+    if(!confirmedSVGImg)confirmedSVGImg=svgToDataUrl(buildPrintSVG());
+    fillRpt();isFinished=true;
+    goTab(3);
+  }
+  /* 2. 현재 mod-tilt, mod-azimuth UI 값 */
   function _gv2(id,def){var el=document.getElementById(id);return el?(parseFloat(el.value)||def||0):def||0;}
   function _gs2(id,def){var el=document.getElementById(id);return el?(el.value||def||''):(def||'');}
+  var _curTilt=_gv2('mod-tilt',15);
+  var _curAz=_gv2('mod-azimuth',0);
+  /* 3. 직렬화 */
   var d={id:Date.now(),name:nm,savedAt:new Date().toISOString(),
     settings:{sname:document.getElementById('sname').value,saddr:document.getElementById('saddr').value,
       mw:document.getElementById('mw').value,mh:document.getElementById('mh').value,
       mp:document.getElementById('mp').value,mg:document.getElementById('mg').value,
       mborder:document.getElementById('mborder').value,
       sregion:_gs2('sregion','jeonnam'),
-      modTilt:_gs2('mod-tilt','15'),
-      modAzimuth:_gs2('mod-azimuth','0'),
-      eEwMinrow:_gs2('e-ew-minrow','0'),
-      eNsMinrow:_gs2('e-ns-minrow','0'),
+      modTilt:String(_curTilt),modAzimuth:String(_curAz),
+      eEwMinrow:_gs2('e-ew-minrow','0'),eNsMinrow:_gs2('e-ns-minrow','0'),
       iType:iType,orient:orient,rotA:rotA},
     view:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()},
     pvgis:{lat:_pvgisLat,lng:_pvgisLng,ghiRaw:(_pvgisGhiRaw||null),gen:(_pvgisGen||null),genBase:(_pvgisGenBase||0)},
-    zones:zones.map(function(z){return{pts:z.pts,mods:z.mods,iType:z.iType,orient:z.orient,
-      rotA:z.rotA,tilt:z.tilt,mp:z.mp,cnt:z.cnt,kw:z.kw,area:z.area,borderOff:z.borderOff,name:z.name};}),
+    /* zones: tilt/rotA/azimuth 반드시 포함 */
+    zones:zones.map(function(z){
+      return{pts:z.pts,mods:z.mods,iType:z.iType,orient:z.orient,
+        rotA:(z.rotA!==undefined?z.rotA:_curAz),
+        tilt:(z.tilt!==undefined?z.tilt:_curTilt),
+        mp:z.mp,cnt:z.cnt,kw:z.kw,area:z.area,borderOff:z.borderOff,name:z.name};
+    }),
     photos:(confirmedMapImgs&&confirmedMapImgs.length?confirmedMapImgs.map(function(x){return{src:x.src,name:x.name||''};}):null),
     svgImg:(confirmedSVGImg||null),
-    isFinished:isFinished,
+    isFinished:true,
     estimate:(function(){
       if(!_estOn)return null;
-      return {on:true,
-        ppkFix:_gv2('est-ppk-fix',1100000),ppkFe:_gv2('est-ppk-fe',1300000),ppkFd:_gv2('est-ppk-fd',1500000),
-        vat:_gv2('est-vat',10)};
+      return{on:true,ppkFix:_gv2('est-ppk-fix',1100000),ppkFe:_gv2('est-ppk-fe',1300000),
+        ppkFd:_gv2('est-ppk-fd',1500000),vat:_gv2('est-vat',10)};
     })(),
     simulator:(function(){
       if(!_simOn)return null;
-      return {on:true,
-        years:_gv2('sim-years',20),equity:_gv2('sim-equity',20),
+      return{on:true,years:_gv2('sim-years',20),equity:_gv2('sim-equity',20),
         smp:_gv2('sim-smp',115),rate:_gv2('sim-rate',4),
         rec:_gv2('sim-rec',71),recw:_gv2('sim-recw',1.0)};
     })()};
+  if(directDownload){
+    /* projectSaveAs: 파일 직접 다운로드 + 앱 메모리에도 저장 */
+    var _ei=_proj.findIndex(function(p){return p.name===nm;});
+    if(_ei>=0)_proj[_ei]=d;else{_proj.unshift(d);if(_proj.length>30)_proj=_proj.slice(0,30);}
+    _lsSet('sd_proj',JSON.stringify(_proj));
+    _showSaveModal(d);
+    return;
+  }
+  /* projectSave: 앱 메모리 저장 + 팝업 */
   var ei=_proj.findIndex(function(p){return p.name===nm;});
   if(ei>=0){if(!confirm('"'+nm+'" 이미 있습니다. 덮어쓰시겠습니까?'))return;_proj[ei]=d;}
   else{_proj.unshift(d);if(_proj.length>30)_proj=_proj.slice(0,30);}
@@ -6075,7 +6079,6 @@ window._doSv=function(){
   if(_rec.length>5)_rec=_rec.slice(0,5);
   _lsSet('sd_rec',JSON.stringify(_rec));
   _refreshAll();
-  /* ── 저장 완료 팝업: JSON 다운로드 + URL 공유 ── */
   _showSaveModal(d);
 };
 
