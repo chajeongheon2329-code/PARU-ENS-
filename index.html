@@ -2342,7 +2342,8 @@ document.addEventListener('change',function(e){
     if(opts){opts.style.opacity=e.target.checked?'1':'0.4';opts.style.pointerEvents=e.target.checked?'':'none';}
     if(iType==='fs'&&(curMode==='move'||modsSnapshot)){
       var subStart=window._subSpanStart!=null?window._subSpanStart:mods.length;
-      mods=mods.slice(0,subStart);
+      mods=mods.slice(0,subStart); /* 서브스판만 제거, 메인(수동이동 포함) 유지 */
+      modsSnapshot=JSON.parse(JSON.stringify(mods)); /* 현재 메인 위치 고정 */
       var expOn=document.getElementById('expand-on');
       if(expOn&&expOn.checked){runExpandLayout();}else{drawMods();}
       return;
@@ -2351,8 +2352,12 @@ document.addEventListener('change',function(e){
   }
   if(e.target&&e.target.id==='expand-on'){
     if(iType==='fs'&&(curMode==='move'||modsSnapshot)){
+      /* 수동이동 완료 상태: 현재 mods의 메인 스팬(_subSpanStart 이전)은 건드리지 않음
+         서브스판(subStart2 이후)만 제거하고 확장배치/서브스판 재실행 */
       var subStart2=window._subSpanStart!=null?window._subSpanStart:mods.length;
-      mods=mods.slice(0,subStart2);
+      mods=mods.slice(0,subStart2); /* 서브스판 제거, 메인은 유지 */
+      /* modsSnapshot도 현재 메인 기준으로 갱신 (위치 고정) */
+      modsSnapshot=JSON.parse(JSON.stringify(mods));
       window._subSpanStart=mods.length;
       var expOn2=document.getElementById('expand-on');
       if(expOn2&&expOn2.checked){runExpandLayout();}else{drawMods();}
@@ -4260,28 +4265,42 @@ window.autoOptimizeAngle=function(){
       return cnt*(1+0.15*(1-sd/90));
     }
 
-    var best={ang:0,cnt:0,score:-1};
+    var best={ang:0,cnt:0,score:-1,ox:0,oy:0};
     var coarseStep=isExpand?10:5;
 
-    /* 단축식 탐색 범위:
-       동서축(ew): 배치각 0°(동서) 기준 ±45° 범위 (0~45° 및 135~179°)
-       남북축(ns): 배치각 90°(남북) 기준 ±45° 범위 (45~135°)
-       → 범위 외 각도는 탐색 건너뜀 */
     function _feAngAllowed(ang){
       if(iType!=='fe')return true;
       var feAxisOpt=window._feAxis||'ew';
       var n=((ang%180)+180)%180;
-      if(feAxisOpt==='ew') return n<=45||n>=135;  /* 동서 방향 */
-      else                 return n>=45&&n<=135;  /* 남북 방향 */
+      if(feAxisOpt==='ew') return n<=45||n>=135;
+      else                 return n>=45&&n<=135;
     }
 
+    /* 오프셋 포함 모듈 수 계산 */
+    var _origOffX=parseFloat((document.getElementById('e-ew-post')||{}).value)||0;
+    var _origOffY=parseFloat((document.getElementById('e-ns-post')||{}).value)||0;
+    var ewPostEl=document.getElementById('e-ew-post');
+    var nsPostEl=document.getElementById('e-ns-post');
+
+    function countModsWithOff(ox,oy){
+      if(ewPostEl)ewPostEl.value=ox;
+      if(nsPostEl)nsPostEl.value=oy;
+      window._subSpanStart=null;
+      mods=calcMods();
+      if(isExpand){runExpandLayout();}
+      return mods.length;
+    }
+
+    /* 1단계: 회전각 coarse 탐색 */
     for(var ang=0;ang<180;ang+=coarseStep){
       if(!_feAngAllowed(ang))continue;
       rotA=ang;
       var cnt=countMods();
       var sc=score(ang,cnt);
-      if(sc>best.score)best={ang:ang,cnt:cnt,score:sc};
+      if(sc>best.score)best={ang:ang,cnt:cnt,score:sc,ox:_origOffX,oy:_origOffY};
     }
+
+    /* 2단계: best 각도 주변 fine 탐색 */
     var fineRange=isExpand?5:8;
     var fineStep=isExpand?2:1;
     for(var a2=Math.max(0,best.ang-fineRange);a2<=Math.min(179,best.ang+fineRange);a2+=fineStep){
@@ -4289,7 +4308,49 @@ window.autoOptimizeAngle=function(){
       rotA=a2;
       var c2=countMods();
       var sc2=score(a2,c2);
-      if(sc2>best.score)best={ang:a2,cnt:c2,score:sc2};
+      if(sc2>best.score)best={ang:a2,cnt:c2,score:sc2,ox:_origOffX,oy:_origOffY};
+    }
+
+    /* 3단계: 최적 각도에서 X/Y 오프셋 탐색 (추적식 제외)
+       포스트 간격의 ±50% 범위를 10%씩 스캔 */
+    if(iType!=='fe'&&iType!=='fd'&&!isExpand){
+      rotA=best.ang;
+      /* 현재 피치 정보 추출 */
+      var _dim=getModDim?getModDim():null;
+      var _mw=_dim?_dim.mw:parseFloat((document.getElementById('mw')||{}).value)/1000||1.1;
+      var _mh=_dim?_dim.mh:parseFloat((document.getElementById('mh')||{}).value)/1000||2.3;
+      var _mg=_dim?_dim.mg:parseFloat((document.getElementById('mg')||{}).value)/1000||0.02;
+      var _sc=parseInt((document.getElementById('sc')||{}).value)||1;
+      var _sr=parseInt((document.getElementById('sr')||{}).value)||1;
+      var _scg=parseFloat((document.getElementById('scg')||{}).value)/1000||0.5;
+      var _sns=parseFloat((document.getElementById('sns')||{}).value)/1000||1.2;
+      var _pitchX=(_sc*(_mw+_mg)-_mg)+_scg;
+      var _pitchY=(_sr*(_mh+_mg)-_mg)+_sns;
+      var _stepX=Math.round(_pitchX*0.1*1000)/1000;
+      var _stepY=Math.round(_pitchY*0.1*1000)/1000;
+      var _rangeX=Math.round(_pitchX*0.5*1000)/1000;
+      var _rangeY=Math.round(_pitchY*0.5*1000)/1000;
+      var _bestOff={ox:_origOffX,oy:_origOffY,cnt:best.cnt,score:best.score};
+      for(var ox=_origOffX-_rangeX;ox<=_origOffX+_rangeX;ox+=_stepX){
+        for(var oy=_origOffY-_rangeY;oy<=_origOffY+_rangeY;oy+=_stepY){
+          var _c=countModsWithOff(
+            Math.round(ox*1000)/1000,
+            Math.round(oy*1000)/1000
+          );
+          var _sc3=score(best.ang,_c);
+          if(_sc3>_bestOff.score){_bestOff={ox:Math.round(ox*1000)/1000,oy:Math.round(oy*1000)/1000,cnt:_c,score:_sc3};}
+        }
+      }
+      /* 최적 오프셋 적용 */
+      if(ewPostEl)ewPostEl.value=_bestOff.ox;
+      if(nsPostEl)nsPostEl.value=_bestOff.oy;
+      best.ox=_bestOff.ox;best.oy=_bestOff.oy;
+      best.cnt=_bestOff.cnt;best.score=_bestOff.score;
+      /* 최적 상태로 재계산 */
+      rotA=best.ang;
+      countMods();
+    } else {
+      setRot(best.ang);
     }
 
     setRot(best.ang);
@@ -4716,6 +4777,8 @@ window.confirmMoveOK=function(){
   _expandPosts=[];_expandPostsOrigin=[];
   /* 확정된 배치를 스냅샷으로 저장 → 다음 확장배치이동 시 여기서 시작 */
   modsSnapshot=JSON.parse(JSON.stringify(mods));
+  /* 수동이동 확정 시 subSpanStart도 현재 mods 기준으로 갱신 (서브스판이 없으므로 전체가 메인) */
+  window._subSpanStart=mods.length;
   exitMoveMode();moveSubMode='';
   ['bmove-exp','bmove-all','bmove-sel','bmove-span'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('on');});
   if(_spanMoveHandlers){_spanMoveHandlers();}
