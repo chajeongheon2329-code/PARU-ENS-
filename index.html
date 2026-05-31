@@ -1260,8 +1260,8 @@ function calcMods(){
   var borderOff=(gv('mborder')||0)/1000; /* 경계 이격 거리 (m) — 경계선 안쪽 exclusion zone */
   var lp=pts.map(function(p){return ll2xy(p[0],p[1]);});
   var a=d2r(-rotA),dim=getModDim(),mw=dim.mw,mh=dim.mh,mg=dim.mg,res=[];
-  function flat(){var bb=getBB(lp,a);for(var r=0;r<Math.ceil((bb.y1-bb.y0)/(mh+mg))+2;r++)for(var c=0;c<Math.ceil((bb.x1-bb.x0)/(mw+mg))+2;c++){var m=mkM(bb.x0+c*(mw+mg),bb.y0+r*(mh+mg),mw,mh,a,lp,borderOff);if(m)res.push(m);}}
-  function ginseng(){var pr=gi('gpr'),ns=gv('gns')/1000,bb=getBB(lp,a),gH=pr*(mh+mg)-mg,rP=gH+ns;for(var r=0;r<Math.ceil((bb.y1-bb.y0)/rP)+2;r++)for(var c=0;c<Math.ceil((bb.x1-bb.x0)/(mw+mg))+2;c++)for(var s=0;s<pr;s++){var m=mkM(bb.x0+c*(mw+mg),bb.y0+r*rP+s*(mh+mg),mw,mh,a,lp,borderOff);if(m)res.push(m);}}
+  function flat(){var bb=getBB(lp,a);var _fgx=(window._feGridOffX||0),_fgy=(window._feGridOffY||0);for(var r=0;r<Math.ceil((bb.y1-bb.y0)/(mh+mg))+3;r++)for(var c=0;c<Math.ceil((bb.x1-bb.x0)/(mw+mg))+3;c++){var m=mkM(bb.x0+_fgx+c*(mw+mg),bb.y0+_fgy+r*(mh+mg),mw,mh,a,lp,borderOff);if(m)res.push(m);}}
+  function ginseng(){var pr=gi('gpr'),ns=gv('gns')/1000,bb=getBB(lp,a),gH=pr*(mh+mg)-mg,rP=gH+ns;var _ggx=(window._feGridOffX||0),_ggy=(window._feGridOffY||0);for(var r=0;r<Math.ceil((bb.y1-bb.y0)/rP)+3;r++)for(var c=0;c<Math.ceil((bb.x1-bb.x0)/(mw+mg))+3;c++)for(var s=0;s<pr;s++){var m=mkM(bb.x0+_ggx+c*(mw+mg),bb.y0+_ggy+r*rP+s*(mh+mg),mw,mh,a,lp,borderOff);if(m)res.push(m);}}
   function span(){
     var sc2=gi('sc'),sr2=gi('sr'),scg=gv('scg')/1000,sns=gv('sns')/1000;
     var bb=getBB(lp,a);
@@ -1281,11 +1281,12 @@ function calcMods(){
 
     /* 메인 스팬 배치 — 배치된 격자 위치 기록 */
     var mainGrid={}; /* key: "r,c" */
-    var nCols=Math.ceil((bb.x1-bb.x0)/pX)+2;
-    var nRows=Math.ceil((bb.y1-bb.y0)/pY)+2;
+    var _sgx=(window._feGridOffX||0),_sgy=(window._feGridOffY||0);
+    var nCols=Math.ceil((bb.x1-bb.x0)/pX)+3;
+    var nRows=Math.ceil((bb.y1-bb.y0)/pY)+3;
     for(var r=0;r<nRows;r++)
       for(var c=0;c<nCols;c++){
-        var x0=bb.x0+c*pX, y0=bb.y0+r*pY;
+        var x0=bb.x0+_sgx+c*pX, y0=bb.y0+_sgy+r*pY;
         var spanMods=trySpan(x0,y0,sc2,sr2);
         if(spanMods){
           spanMods.forEach(function(m){res.push(m);});
@@ -1401,14 +1402,15 @@ function calcMods(){
       if(ewPost<=0||count<1)return;
       /* 그룹 전체 동서 폭 */
       var groupW=count*mw+(count-1)*mg;
-      var nsCols=Math.ceil((bb.x1-bb.x0)/ewPost)+2;
-      var nsRows=Math.ceil((bb.y1-bb.y0)/(mh+mg))+2;
+      var _ewGox=(window._feGridOffX||0); /* 격자 X 시작 오프셋 (자동배치 최적화용) */
+      var _ewGoy=(window._feGridOffY||0); /* 격자 Y 시작 오프셋 */
+      var nsCols=Math.ceil((bb.x1-bb.x0)/ewPost)+3;
+      var nsRows=Math.ceil((bb.y1-bb.y0)/(mh+mg))+3;
       for(var r=0;r<nsRows;r++)
         for(var c=0;c<nsCols;c++)
           for(var ic=0;ic<count;ic++){
-            /* 그룹 왼쪽 시작 = 포스트 중앙 - groupW/2 */
-            var mx=bb.x0+c*ewPost-groupW/2+ic*(mw+mg);
-            var my=bb.y0+r*(mh+mg);
+            var mx=bb.x0+_ewGox+c*ewPost-groupW/2+ic*(mw+mg);
+            var my=bb.y0+_ewGoy+r*(mh+mg);
             var m=mkM(mx,my,mw,mh,a,lp,borderOff);
             if(m)res.push(m);
           }
@@ -1422,13 +1424,15 @@ function calcMods(){
       var countNS=_giS('e-ns-count',1);
       if(nsPost<=0||countNS<1)return;
       var groupH2=countNS*mh+(countNS-1)*mg;
-      var ewCols=Math.ceil((bb.x1-bb.x0)/(mw+mg))+2;
-      var ewRows=Math.ceil((bb.y1-bb.y0)/nsPost)+2;
+      var _nsGox=(window._feGridOffX||0);
+      var _nsGoy=(window._feGridOffY||0);
+      var ewCols=Math.ceil((bb.x1-bb.x0)/(mw+mg))+3;
+      var ewRows=Math.ceil((bb.y1-bb.y0)/nsPost)+3;
       for(var r2=0;r2<ewRows;r2++)
         for(var c2=0;c2<ewCols;c2++)
           for(var ir2=0;ir2<countNS;ir2++){
-            var mx2=bb.x0+c2*(mw+mg);
-            var my2=bb.y0+r2*nsPost-groupH2/2+ir2*(mh+mg);
+            var mx2=bb.x0+_nsGox+c2*(mw+mg);
+            var my2=bb.y0+_nsGoy+r2*nsPost-groupH2/2+ir2*(mh+mg);
             var m2=mkM(mx2,my2,mw,mh,a,lp,borderOff);
             if(m2)res.push(m2);
           }
@@ -1475,12 +1479,14 @@ function calcMods(){
     var diagHalf=Math.sqrt(sW*sW+sH*sH)/2;
     var postR=Math.max(diagHalf*0.06,0.5);
     var bb=getBB(lp,a);
-    var cols=Math.min(Math.ceil((bb.x1-bb.x0)/pd)+2,80);
-    var rows=Math.min(Math.ceil((bb.y1-bb.y0)/pd)+2,80);
+    var _fdGox=(window._feGridOffX||0);
+    var _fdGoy=(window._feGridOffY||0);
+    var cols=Math.min(Math.ceil((bb.x1-bb.x0)/pd)+3,80);
+    var rows=Math.min(Math.ceil((bb.y1-bb.y0)/pd)+3,80);
     var posts=[];
     for(var r=0;r<rows;r++)
       for(var c=0;c<cols;c++){
-        var lcx=bb.x0+c*pd,lcy=bb.y0+r*pd;
+        var lcx=bb.x0+_fdGox+c*pd,lcy=bb.y0+_fdGoy+r*pd;
         /* 포스트(글로벌 xy) 기준 경계 체크 */
         var gce=rp(lcx,lcy,a);
         var pcx=gce[0],pcy=gce[1];
@@ -2143,6 +2149,21 @@ window.clipToBoundary=function(){
       if(g.length>=minSpan){g.forEach(function(gi){keep.push(okMods[gi]);});}
     });
     mods=keep;
+  } else if(iType==='fe'){
+    /* 단축식: 포스트 그룹(count장 묶음) 단위로 삭제 */
+    var feAxisF2=window._feAxis||'ew';
+    var feCount=feAxisF2==='ew'
+      ?(parseInt((document.getElementById('e-ew-count')||{}).value)||1)
+      :(parseInt((document.getElementById('e-ns-count')||{}).value)||1);
+    if(feCount<1)feCount=1;
+    var keptFe=[];
+    for(var fi=0;fi<mods.length;fi+=feCount){
+      var grpFe=mods.slice(fi,fi+feCount);
+      /* 그룹 내 모든 모듈이 경계 OK여야 유지 */
+      var grpOK=grpFe.every(function(m){return modOK(m);});
+      if(grpOK)grpFe.forEach(function(m){keptFe.push(m);});
+    }
+    mods=keptFe;
   } else {
     /* 기타 유형: 모듈 단위 삭제 */
     mods=mods.filter(function(m){return modOK(m);});
@@ -2435,6 +2456,7 @@ function _updateOrientBtn(){
 
 window.setFeAxis=function(axis){
   window._feAxis=axis;
+  window._feGridOffX=0;window._feGridOffY=0; /* 축 전환 시 격자 오프셋 초기화 */
   document.getElementById('fe-axis-ew').classList.toggle('on',axis==='ew');
   document.getElementById('fe-axis-ns').classList.toggle('on',axis==='ns');
   document.getElementById('fe-opt-ew').style.display=axis==='ew'?'':'none';
@@ -4227,7 +4249,7 @@ function _deleteByIndices(indices,label){
 
 /* 고정식 경계 걸림 스판 전체 삭제 (clipToBoundary 대체) */
 
-/* ── 자동 최적 탐색 (발전량 최우선) ── */
+/* ── 자동 최적 탐색 (발전량 최우선, 진행바 포함) ── */
 window.autoOptimizeAngle=function(){
   if(!pts.length||!_typeSelected){setSt('먼저 부지를 그려주세요','r');return;}
   var btn=document.getElementById('btn-auto-opt');
@@ -4237,139 +4259,361 @@ window.autoOptimizeAngle=function(){
   if(btnTb){btnTb.textContent='⏳...';btnTb.disabled=true;}
   if(result)result.style.display='none';
 
+  /* ── 진행바 오버레이 ── */
+  var _pov=document.getElementById('_auto-prog-ov');
+  if(_pov)_pov.remove();
+  _pov=document.createElement('div');_pov.id='_auto-prog-ov';
+  _pov.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);'
+    +'background:#161b22;border:1px solid #f7c948;border-radius:12px;padding:14px 20px;'
+    +'z-index:99990;min-width:260px;max-width:90vw;box-shadow:0 4px 24px rgba(0,0,0,.7);text-align:center';
+  _pov.innerHTML='<div style="font-size:12px;color:#f7c948;font-weight:700;margin-bottom:8px" id="_ap-label">🔍 각도 탐색 중...</div>'
+    +'<div style="background:#0d1117;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">'
+    +'<div id="_ap-bar" style="height:100%;background:linear-gradient(90deg,#3fb950,#f7c948);border-radius:6px;width:0%;transition:width 0.15s"></div></div>'
+    +'<div style="font-size:11px;color:#8b949e" id="_ap-sub">준비 중...</div>'
+    +'<button onclick="window._autoCancel=true" style="margin-top:8px;background:transparent;border:1px solid #f85149;color:#f85149;padding:3px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-family:inherit">✕ 중단</button>';
+  document.body.appendChild(_pov);
+
+  function _setBar(pct,label,sub){
+    var bar=document.getElementById('_ap-bar');
+    var lbl=document.getElementById('_ap-label');
+    var sb=document.getElementById('_ap-sub');
+    if(bar)bar.style.width=pct+'%';
+    if(label&&lbl)lbl.textContent=label;
+    if(sub&&sb)sb.textContent=sub;
+  }
+
+  window._autoCancel=false;
+
   setTimeout(function(){
     var tilt=parseFloat((document.getElementById('mod-tilt')||{}).value)||15;
     var hasPvgis=(_pvgisGhiRaw&&_pvgisGhiRaw.length&&_pvgisLat!==null);
     var modKw=parseFloat((document.getElementById('mp')||{}).value||655)/1000;
     var expOn=document.getElementById('expand-on');
     var isExpand=expOn&&expOn.checked&&iType==='fs';
+    var subOn=document.getElementById('sub-span-on');
+    var hasSub=subOn&&subOn.checked&&isExpand;
 
-    /* 확장배치+서브스팬 포함 총 모듈 수 계산 함수 */
     function countMods(){
       window._subSpanStart=null;
       mods=calcMods();
       if(isExpand){runExpandLayout();}
       return mods.length;
     }
-
     function southDist(a){var n=((a%180)+180)%180;return Math.min(n,180-n);}
     function score(ang,cnt){
       if(cnt===0)return -1;
-      /* 단축식/양축식: 추적식이므로 회전각과 발전량 무관 → 모듈 수만 최대화 */
-      if(iType==='fe'||iType==='fd') return cnt;
-      if(hasPvgis){
-        var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,ang);
-        return cnt*poa;
+      if(iType==='fd'){
+        /* 양축식: 항상 태양 직추적 → 발전량은 cnt에 비례, 각도 무관 */
+        return cnt;
       }
-      var sd=southDist(ang);
-      return cnt*(1+0.15*(1-sd/90));
+      if(iType==='fe'){
+        /* 단축식: 발전량 계산 가능하면 계산 */
+        if(hasPvgis){
+          var feAxisOpt=window._feAxis||'ew';
+          var modAz;
+          if(feAxisOpt==='ew'){
+            /* 동서축: 모듈 면이 ang+90° 방향 (동쪽 또는 서쪽) */
+            modAz=(ang+90)%180;
+          } else {
+            /* 남북축: 모듈 면이 ang 방향 (남향 기준) */
+            modAz=ang;
+          }
+          /* 단축식 경사각 */
+          var feTilt=parseFloat((document.getElementById('mod-tilt')||{}).value)||30;
+          var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,feTilt,modAz);
+          return cnt*poa;
+        }
+        return cnt; /* PVGIS 없으면 모듈 수만 */
+      }
+      /* 고정식 */
+      if(hasPvgis){var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,ang);return cnt*poa;}
+      var sd=southDist(ang);return cnt*(1+0.15*(1-sd/90));
     }
-
-    var best={ang:0,cnt:0,score:-1,ox:0,oy:0};
-    var coarseStep=isExpand?10:5;
-
     function _feAngAllowed(ang){
       if(iType!=='fe')return true;
       var feAxisOpt=window._feAxis||'ew';
       var n=((ang%180)+180)%180;
-      if(feAxisOpt==='ew') return n<=45||n>=135;
-      else                 return n>=45&&n<=135;
+      if(feAxisOpt==='ew')return n<=45||n>=135;
+      else return n>=45&&n<=135;
     }
 
-    /* 오프셋 포함 모듈 수 계산 */
-    var _origOffX=parseFloat((document.getElementById('e-ew-post')||{}).value)||0;
-    var _origOffY=parseFloat((document.getElementById('e-ns-post')||{}).value)||0;
-    var ewPostEl=document.getElementById('e-ew-post');
-    var nsPostEl=document.getElementById('e-ns-post');
-
-    function countModsWithOff(ox,oy){
-      if(ewPostEl)ewPostEl.value=ox;
-      if(nsPostEl)nsPostEl.value=oy;
+    /* 피치/오프셋 */
+    /* 고정식 격자 오프셋 탐색용 - e-ew-post는 포스트간격이므로 건드리지 않음 */
+    function countModsWithOff(gox,goy){
+      window._feGridOffX=gox;
+      window._feGridOffY=goy;
       window._subSpanStart=null;
       mods=calcMods();
       if(isExpand){runExpandLayout();}
       return mods.length;
     }
+    var _origOffX=0, _origOffY=0;
 
-    /* 1단계: 회전각 coarse 탐색 */
+    /* 피치 계산 */
+    var _dim=typeof getModDim==='function'?getModDim():null;
+    var _mw=_dim?_dim.mw:parseFloat((document.getElementById('mw')||{}).value)/1000||1.1;
+    var _mh=_dim?_dim.mh:parseFloat((document.getElementById('mh')||{}).value)/1000||2.3;
+    var _mg=_dim?_dim.mg:parseFloat((document.getElementById('mg')||{}).value)/1000||0.02;
+    var _sc=parseInt((document.getElementById('sc')||{}).value)||1;
+    var _sr=parseInt((document.getElementById('sr')||{}).value)||1;
+    var _scg=parseFloat((document.getElementById('scg')||{}).value)/1000||0.5;
+    var _sns=parseFloat((document.getElementById('sns')||{}).value)/1000||1.2;
+    var _pitchX=(_sc*(_mw+_mg)-_mg)+_scg;
+    var _pitchY=(_sr*(_mh+_mg)-_mg)+_sns;
+    /* 확장배치: 오프셋 스텝을 더 촘촘하게 (피치 20%) */
+    var _offStep=isExpand?0.2:0.1;
+    var _offRange=isExpand?0.4:0.5;
+    var _stepX=Math.max(0.05,Math.round(_pitchX*_offStep*1000)/1000);
+    var _stepY=Math.max(0.05,Math.round(_pitchY*_offStep*1000)/1000);
+    var _rangeX=Math.round(_pitchX*_offRange*1000)/1000;
+    var _rangeY=Math.round(_pitchY*_offRange*1000)/1000;
+
+    /* 탐색 작업 목록 생성 */
+    var coarseStep=isExpand?10:5;
+    var tasks=[];
+
+    /* 1단계: 각도 탐색 (각도별 x=0, y=0 오프셋) */
     for(var ang=0;ang<180;ang+=coarseStep){
-      if(!_feAngAllowed(ang))continue;
-      rotA=ang;
-      var cnt=countMods();
-      var sc=score(ang,cnt);
-      if(sc>best.score)best={ang:ang,cnt:cnt,score:sc,ox:_origOffX,oy:_origOffY};
+      if(_feAngAllowed(ang))tasks.push({phase:1,ang:ang,ox:_origOffX,oy:_origOffY});
+    }
+    var phase1End=tasks.length;
+    /* 2단계(fine) - 1단계 끝난 후 best 기준으로 동적 추가 */
+    /* 3단계(offset) - 2단계 끝난 후 동적 추가 */
+
+    var best={ang:0,cnt:0,score:-1,ox:_origOffX,oy:_origOffY};
+
+    /* ── 상태머신: 모든 task를 1개 배열로 평탄화해서 순서대로 실행 ── */
+    /* ── 각도×오프셋 전체 조합 동시 탐색 ── */
+    /* 오프셋 격자 사전 계산 */
+    function _buildOffsets(){
+      var offs=[];
+      if(iType==='fe'||iType==='fd'){
+        var _fePitch2;
+        if(iType==='fe'){
+          var _feAx2=window._feAxis||'ew';
+          _fePitch2=_feAx2==='ew'
+            ?(parseFloat((document.getElementById('e-ew-post')||{}).value)||6500)/1000
+            :(parseFloat((document.getElementById('e-ns-post')||{}).value)||4500)/1000;
+        } else {
+          _fePitch2=parseFloat((document.getElementById('dpd')||{}).value)||5;
+        }
+        var _gStep2=Math.max(0.2,Math.round(_fePitch2*0.2*100)/100);
+        for(var gox2=0;gox2<_fePitch2-0.001;gox2+=_gStep2)
+          for(var goy2=0;goy2<_fePitch2-0.001;goy2+=_gStep2)
+            offs.push({gox:Math.round(gox2*1000)/1000,goy:Math.round(goy2*1000)/1000,isGridOff:true});
+      } else {
+        /* 고정식: 스팬 피치 기준 0~pX, 0~pY */
+        var _dim4=typeof getModDim==='function'?getModDim():null;
+        var _mw4=_dim4?_dim4.mw:parseFloat((document.getElementById('mw')||{}).value)/1000||1.1;
+        var _mh4=_dim4?_dim4.mh:parseFloat((document.getElementById('mh')||{}).value)/1000||2.3;
+        var _mg4=_dim4?_dim4.mg:parseFloat((document.getElementById('mg')||{}).value)/1000||0.02;
+        var _sc4=parseInt((document.getElementById('sc')||{}).value)||1;
+        var _sr4=parseInt((document.getElementById('sr')||{}).value)||1;
+        var _scg4=parseFloat((document.getElementById('scg')||{}).value)/1000||0.5;
+        var _sns4=parseFloat((document.getElementById('sns')||{}).value)/1000||1.2;
+        var _pX4=(_sc4*(_mw4+_mg4)-_mg4)+_scg4;
+        var _pY4=(_sr4*(_mh4+_mg4)-_mg4)+_sns4;
+        var _stX4=Math.max(0.1,Math.round(_pX4*0.2*1000)/1000);
+        var _stY4=Math.max(0.1,Math.round(_pY4*0.2*1000)/1000);
+        for(var gox4=0;gox4<_pX4-0.001;gox4+=_stX4)
+          for(var goy4=0;goy4<_pY4-0.001;goy4+=_stY4)
+            offs.push({ox:Math.round(gox4*1000)/1000,oy:Math.round(goy4*1000)/1000});
+      }
+      if(!offs.length)offs.push({ox:0,oy:0});
+      return offs;
     }
 
-    /* 2단계: best 각도 주변 fine 탐색 */
-    var fineRange=isExpand?5:8;
-    var fineStep=isExpand?2:1;
-    for(var a2=Math.max(0,best.ang-fineRange);a2<=Math.min(179,best.ang+fineRange);a2+=fineStep){
-      if(!_feAngAllowed(a2))continue;
-      rotA=a2;
-      var c2=countMods();
-      var sc2=score(a2,c2);
-      if(sc2>best.score)best={ang:a2,cnt:c2,score:sc2,ox:_origOffX,oy:_origOffY};
+    /* 경계선 각도 추출 → 우선 탐색 후보 각도로 추가 */
+    function _getBoundaryAngles(){
+      if(!pts||pts.length<2)return[];
+      var angs=[];
+      var lp2=pts.map(function(p){return ll2xy(p[0],p[1]);});
+      for(var bi=0;bi<lp2.length;bi++){
+        var bj=(bi+1)%lp2.length;
+        var dx=lp2[bj][0]-lp2[bi][0],dy=lp2[bj][1]-lp2[bi][1];
+        var len=Math.sqrt(dx*dx+dy*dy);
+        if(len<0.5)continue;
+        var ang2=((Math.atan2(dy,dx)*180/Math.PI)%180+180)%180;
+        angs.push(Math.round(ang2));
+        /* 직교 방향도 추가 */
+        angs.push(Math.round((ang2+90)%180));
+      }
+      return angs.filter(function(a){return a>=0&&a<180;});
     }
 
-    /* 3단계: 최적 각도에서 X/Y 오프셋 탐색 (추적식 제외)
-       포스트 간격의 ±50% 범위를 10%씩 스캔 */
-    if(iType!=='fe'&&iType!=='fd'&&!isExpand){
+    var _offsets=_buildOffsets();
+    var _bAngles=_getBoundaryAngles();
+
+    /* 탐색 각도 목록 생성: coarse + 경계선 각도 */
+    var _angCandidates=[];
+    var _angSet={};
+    /* coarse 각도 */
+    for(var ang=0;ang<180;ang+=coarseStep){
+      if(_feAngAllowed(ang)&&!_angSet[ang]){_angSet[ang]=true;_angCandidates.push(ang);}
+    }
+    /* 경계선 각도 우선 삽입 (앞에 추가) */
+    var _bAngCand=[];
+    _bAngles.forEach(function(ba){
+      if(_feAngAllowed(ba)&&!_angSet[ba]){_angSet[ba]=true;_bAngCand.push(ba);}
+    });
+    _angCandidates=_bAngCand.concat(_angCandidates);
+
+    /* 전체 task: 각도 × 오프셋 조합 */
+    var allTasks=[];
+    _angCandidates.forEach(function(ang){
+      _offsets.forEach(function(off){
+        allTasks.push(Object.assign({ph:1,ang:ang},off));
+      });
+    });
+    allTasks.push({ph:'P1_DONE'});
+
+    var taskQ=allTasks.slice();
+    var totalEst=taskQ.length;
+    var doneCount=0;
+
+    function _buildPhase2(){
+      /* fine 각도: best 주변 ±4° + 경계선 각도, 각 오프셋 조합 */
+      var fineRange=isExpand?4:6;
+      var fineStep=isExpand?2:1;
+      var t2=[];
+      var _fineAngSet={};
+      /* fine 각도 */
+      for(var a=Math.max(0,best.ang-fineRange);a<=Math.min(179,best.ang+fineRange);a+=fineStep){
+        if(_feAngAllowed(a)&&!_fineAngSet[a]){_fineAngSet[a]=true;}
+      }
+      /* 경계선 각도도 포함 */
+      _bAngles.forEach(function(ba){if(_feAngAllowed(ba)&&!_fineAngSet[ba])_fineAngSet[ba]=true;});
+      Object.keys(_fineAngSet).forEach(function(a2){
+        _offsets.forEach(function(off){
+          t2.push(Object.assign({ph:2,ang:parseInt(a2)},off));
+        });
+      });
+      t2.push({ph:'P2_DONE'});
+      return t2;
+    }
+
+    /* 격자 오프셋으로 단축식/양축식 최적화 */
+    function countModsWithGridOff(gox,goy){
+      window._feGridOffX=gox;
+      window._feGridOffY=goy;
+      window._subSpanStart=null;
+      mods=calcMods();
+      if(isExpand)runExpandLayout();
+      return mods.length;
+    }
+    /* Phase 3는 Phase1/2에서 오프셋 포함 탐색으로 대체됨 - 빈 배열 반환 */
+    function _buildPhase3(){return [{ph:'P3_DONE'}];}
+
+    function _finish(){
+      /* 최적 격자 오프셋 또는 포스트 위치 적용 */
+      /* 모든 타입: 격자 오프셋 적용 */
+      if(iType==='fe'||iType==='fd'){
+        window._feGridOffX=best.gox||0;
+        window._feGridOffY=best.goy||0;
+      } else {
+        /* 고정식: best.ox/oy가 격자 오프셋 */
+        window._feGridOffX=best.ox||0;
+        window._feGridOffY=best.oy||0;
+      }
       rotA=best.ang;
-      /* 현재 피치 정보 추출 */
-      var _dim=getModDim?getModDim():null;
-      var _mw=_dim?_dim.mw:parseFloat((document.getElementById('mw')||{}).value)/1000||1.1;
-      var _mh=_dim?_dim.mh:parseFloat((document.getElementById('mh')||{}).value)/1000||2.3;
-      var _mg=_dim?_dim.mg:parseFloat((document.getElementById('mg')||{}).value)/1000||0.02;
-      var _sc=parseInt((document.getElementById('sc')||{}).value)||1;
-      var _sr=parseInt((document.getElementById('sr')||{}).value)||1;
-      var _scg=parseFloat((document.getElementById('scg')||{}).value)/1000||0.5;
-      var _sns=parseFloat((document.getElementById('sns')||{}).value)/1000||1.2;
-      var _pitchX=(_sc*(_mw+_mg)-_mg)+_scg;
-      var _pitchY=(_sr*(_mh+_mg)-_mg)+_sns;
-      var _stepX=Math.round(_pitchX*0.1*1000)/1000;
-      var _stepY=Math.round(_pitchY*0.1*1000)/1000;
-      var _rangeX=Math.round(_pitchX*0.5*1000)/1000;
-      var _rangeY=Math.round(_pitchY*0.5*1000)/1000;
-      var _bestOff={ox:_origOffX,oy:_origOffY,cnt:best.cnt,score:best.score};
-      for(var ox=_origOffX-_rangeX;ox<=_origOffX+_rangeX;ox+=_stepX){
-        for(var oy=_origOffY-_rangeY;oy<=_origOffY+_rangeY;oy+=_stepY){
-          var _c=countModsWithOff(
-            Math.round(ox*1000)/1000,
-            Math.round(oy*1000)/1000
-          );
-          var _sc3=score(best.ang,_c);
-          if(_sc3>_bestOff.score){_bestOff={ox:Math.round(ox*1000)/1000,oy:Math.round(oy*1000)/1000,cnt:_c,score:_sc3};}
+      window._subSpanStart=null;
+      mods=calcMods();
+      if(isExpand)runExpandLayout();
+      setRot(best.ang);
+      var pov=document.getElementById('_auto-prog-ov');if(pov)pov.remove();
+      if(btn){btn.textContent='✦ 최적 각도 자동 탐색';btn.disabled=false;}
+      if(btnTb){btnTb.textContent='✦ 자동배치';btnTb.disabled=false;}
+      _setBar(100,'✅ 완료','');
+      /* 표시 방위각: 동서축은 모듈 면이 ang+90° 방향 */
+      var _dispAng=best.ang;
+      var _dispAzDesc='배치각 '+best.ang+'°';
+      if(iType==='fe'){
+        var _fea=window._feAxis||'ew';
+        if(_fea==='ew'){
+          var _modFaceAz=(best.ang+90)%180;
+          _dispAzDesc='배치각 '+best.ang+'° (모듈면 '+_modFaceAz+'°방향)';
+        } else {
+          _dispAzDesc='배치각 '+best.ang+'° (남북축)';
         }
       }
-      /* 최적 오프셋 적용 */
-      if(ewPostEl)ewPostEl.value=_bestOff.ox;
-      if(nsPostEl)nsPostEl.value=_bestOff.oy;
-      best.ox=_bestOff.ox;best.oy=_bestOff.oy;
-      best.cnt=_bestOff.cnt;best.score=_bestOff.score;
-      /* 최적 상태로 재계산 */
-      rotA=best.ang;
-      countMods();
-    } else {
-      setRot(best.ang);
+      var sd=southDist(_dispAng);
+      var dir=iType==='fe'?(window._feAxis==='ew'?'동/서향':'남/북향'):(sd<=5?'정남향':sd<=20?'남향권':sd<=45?'남동/남서향':'동/서향');
+      var resText='✅ '+_dispAzDesc+' ('+dir+') → '+best.cnt+'장';
+      if(hasPvgis){
+        var totalKwp=best.cnt*modKw;
+        var _poaAng=best.ang;
+        if(iType==='fe'&&(window._feAxis||'ew')==='ew')_poaAng=(best.ang+90)%180;
+        var feTilt2=parseFloat((document.getElementById('mod-tilt')||{}).value)||30;
+        var _poaTilt=(iType==='fe')?feTilt2:tilt;
+        var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,_poaTilt,_poaAng);
+        var trackMult=iType==='fe'?1.11:iType==='fd'?1.23:1.0;
+        var genKwh=Math.round(totalKwp*poa*0.78*trackMult);
+        resText+=' / '+genKwh.toLocaleString()+' kWh/년';
+      }
+      if((best.ox||0)!==0||(best.oy||0)!==0){
+        resText+=' [격자이동 X='+(best.ox>0?'+':'')+best.ox+'m Y='+(best.oy>0?'+':'')+best.oy+'m]';
+      }
+      if(result){result.style.display='block';result.textContent=resText;}
+      var typeLabel=iType==='fe'?(window._feAxis==='ew'?'단축식(동서축)':'단축식(남북축)'):iType==='fd'?'양축식':(isExpand?'고정식+확장':'고정식');
+      setSt('✅ '+typeLabel+' 최적: '+best.cnt+'장'+(hasPvgis?' · 발전량 최적화':' · 모듈 수 최적화'),'g');
     }
 
-    setRot(best.ang);
-    if(btn){btn.textContent='✦ 최적 각도 자동 탐색';btn.disabled=false;}
-    if(btnTb){btnTb.textContent='✦ 자동배치';btnTb.disabled=false;}
-    var sd=southDist(best.ang);
-    var dir=sd<=5?'정남향':sd<=20?'남향권':sd<=45?'남동/남서향':'동/서향';
-    var resText='✅ '+best.ang+'° ('+dir+') → '+best.cnt+'장';
-    if(hasPvgis){
-      var totalKwp=best.cnt*modKw;
-      var poa=_calcPOA_fromGHI(_pvgisLat,_pvgisGhiRaw,tilt,best.ang);
-      var trackMult=iType==='fe'?1.11:iType==='fd'?1.23:1.0;
-      var genKwh=Math.round(totalKwp*poa*0.78*trackMult);
-      resText+=' / '+genKwh.toLocaleString()+' kWh/년';
+    function _runNext(){
+      if(window._autoCancel){
+        var pov=document.getElementById('_auto-prog-ov');if(pov)pov.remove();
+        if(btn){btn.textContent='✦ 최적 각도 자동 탐색';btn.disabled=false;}
+        if(btnTb){btnTb.textContent='✦ 자동배치';btnTb.disabled=false;}
+        if(best.cnt>0)_finish();
+        return;
+      }
+      if(taskQ.length===0){_finish();return;}
+
+      var task=taskQ.shift();
+
+      /* 구분자 처리 - Phase 전환 시 다음 phase task 삽입 */
+      if(task.ph==='P1_DONE'){
+        var p2=_buildPhase2();
+        /* 앞에 삽입 */
+        for(var i=p2.length-1;i>=0;i--)taskQ.unshift(p2[i]);
+        totalEst=doneCount+taskQ.length;
+        setTimeout(_runNext,0);return;
+      }
+      if(task.ph==='P2_DONE'){
+        var p3=_buildPhase3(); /* fine 후 best.ang 반영 */
+        for(var i=p3.length-1;i>=0;i--)taskQ.unshift(p3[i]);
+        totalEst=doneCount+taskQ.length;
+        setTimeout(_runNext,0);return;
+      }
+      if(task.ph==='P3_DONE'){_finish();return;}
+
+      /* 실제 계산 */
+      rotA=task.ang;
+      var cnt;
+      if(task.isGridOff){
+        /* 단축식/양축식: 격자 오프셋 방식 */
+        cnt=countModsWithGridOff(task.gox||0,task.goy||0);
+        var sc=score(task.ang,cnt);
+        if(sc>best.score)best={ang:task.ang,cnt:cnt,score:sc,ox:task.gox||0,oy:task.goy||0,gox:task.gox||0,goy:task.goy||0};
+      } else {
+        /* 고정식: 격자 오프셋 방식 */
+        var _gox4=task.ox||0,_goy4=task.oy||0;
+        if(_gox4===0&&_goy4===0){cnt=countMods();}
+        else{cnt=countModsWithOff(_gox4,_goy4);}
+        var sc=score(task.ang,cnt);
+        if(sc>best.score)best={ang:task.ang,cnt:cnt,score:sc,ox:_gox4,oy:_goy4,gox:0,goy:0};
+      }
+      doneCount++;
+
+      /* 진행바 */
+      var prog=Math.min(98,Math.round(doneCount/Math.max(1,totalEst)*100));
+      var phaseLabel=task.ph===1?'🔍 각도 탐색 ('+prog+'%)':task.ph===2?'🎯 정밀 각도 ('+prog+'%)':'📐 위치 최적화 ('+prog+'%)';
+      var subTxt='현재 best: '+best.ang+'° '+best.cnt+'장'+(best.ox!==_origOffX?' [위치조정 중]':'');
+      _setBar(prog,phaseLabel,subTxt);
+
+      setTimeout(_runNext,0);
     }
-    if(result){result.style.display='block';result.textContent=resText;}
-    var typeLabel=iType==='fe'?'단축식':iType==='fd'?'양축식':'고정식';
-    setSt('✅ '+typeLabel+' 최적각도 '+best.ang+'° ('+best.cnt+'장'+
-      (hasPvgis?' · 발전량 최적화':' · 남향 최적화')+') 적용','g');
+
+    _runNext();
   },50);
 };
 var _curTab=4;
